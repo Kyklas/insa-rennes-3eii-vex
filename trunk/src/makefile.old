@@ -1,0 +1,65 @@
+pkg_packages := gtk+-2.0 hildon-1 bluez glib-2.0 gthread-2.0 libosso osso-af-settings dbus-glib-1
+
+PKG_CFLAGS := $(shell pkg-config --cflags $(pkg_packages))
+PKG_LDFLAGS := $(shell pkg-config --libs $(pkg_packages))
+
+# additional flags
+# -Wall : warnings
+# -g : debugging
+ADD_CFLAGS := -Wall -g
+
+# Compiler
+CC := g++
+
+# Combine flags
+CFLAGS := $(ADD_CFLAGS) $(PKG_CFLAGS) 
+LDFLAGS := $(PKG_LDFLAGS)
+
+# Binaries Path
+binpath := bin/$(shell arch)
+objpath := obj/$(shell arch)
+
+obj := $(objpath)/ui/uithread.o $(objpath)/ui/callbacks.o $(objpath)/ui/interface.o $(objpath)/bt/btthread.o $(objpath)/bt/bluetooth.o $(objpath)/main.o
+
+.PHONY: default
+default: vex
+
+.PHONY: clean
+
+clean:
+	$(RM) $(obj)
+
+vex: $(obj)
+	@$(CC)  $^ -o '$(binpath)/$@' $(LDFLAGS)
+#	@$(RM) $^
+	@echo $@ created in $(binpath)
+
+$(objpath)/main.o: main.c
+	@$(CC) -c $^ -o $@ $(CFLAGS)
+	@echo $@ created.
+
+# User Interface Compiling
+
+$(objpath)/ui/callbacks.o: ui/callbacks.c
+	@$(CC) -c $^ -o $@ $(CFLAGS)
+	@echo $@ created.
+
+$(objpath)/ui/interface.o: ui/interface.c
+	@$(CC) -c $^ -o $@ $(CFLAGS)
+	@echo $@ created.
+
+$(objpath)/ui/uithread.o: ui/uithread.c
+	@$(CC) -c $^ -o $@ $(CFLAGS)
+	@echo $@ created.
+
+# Bluetooth Compiling
+
+$(objpath)/bt/btthread.o: bt/btthread.c
+	@$(CC) -c $^ -o $@ $(CFLAGS)
+	@echo $@ created.
+
+$(objpath)/bt/bluetooth.o: bt/bluetooth.c
+	@$(CC) -c $^ -o $@ $(CFLAGS)
+	@echo $@ created.
+
+
