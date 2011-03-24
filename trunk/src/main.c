@@ -56,11 +56,6 @@ int main(int argc, char *argv[])
 	g_set_application_name("Vex");
 
 
-	/* Initilize thread support */
-	if (!g_thread_supported())
-		g_thread_init(NULL);
-
-
 	AppData * data = create_data();
 	data->program = program;
 	create_user_interface(data);
