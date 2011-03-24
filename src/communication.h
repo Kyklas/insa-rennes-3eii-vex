@@ -20,6 +20,19 @@
 #define COMBINE_CMD_MOD(CMD,MOD) (CMD | MOD)
 
 /**
+ * \brief longeur de la commande déplacement
+ *
+ */
+#define CMD_DPL_LEN		2
+
+/**
+ * \brief longeur de la commande environement
+ *
+ */
+#define CMD_ENV_LEN		2
+
+
+/**
  * \brief commande déplacement
  *
  */

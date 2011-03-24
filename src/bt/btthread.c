@@ -45,6 +45,8 @@ gpointer thread_bluetooth_inquiry(AppData* data)
 
 	return NULL;
 }
+
+// TODO ckeck up on pango for utf8 handling
 gchar *convert_utf_string(char *t)
 {
     static gchar *s = NULL;
@@ -113,8 +115,8 @@ void thread_recv_func(AppData *data)
 	int status=0;
 	gchar * out;
 	GtkTextIter  iter;
-
 	GTimeVal  wait;
+
 	GMutex *wait_mut = g_mutex_new ();
 
 	g_mutex_lock (wait_mut);
@@ -166,14 +168,10 @@ void thread_recv_func(AppData *data)
 		g_get_current_time (&wait);
 		g_time_val_add (&wait,1000);
 
+
 	}while(!g_cond_timed_wait ( data->devconn->disconnect,wait_mut, &wait ));
 
 	g_mutex_unlock (wait_mut);
-
-	g_mutex_free(wait_mut);
-
-	// Don't know what this is doing there
-	//gtk_widget_destroy((GtkWidget*) data->banner_progress);
 
 	g_cond_free(data->devconn->disconnect);
 	data->devconn->disconnect = NULL;
