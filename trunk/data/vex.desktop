@@ -1,0 +1,11 @@
+[Desktop Entry]
+Name=Vex Remote
+Version=1.0
+Categories=Utility
+Type=Application
+Exec=/usr/bin/vex
+X-Osso-Service=org.maemo.vex
+MimeType=application/x-vex;
+Icon=vex
+X-Window-Icon=vex
+X-Window-Icon-Dimmed=vex
