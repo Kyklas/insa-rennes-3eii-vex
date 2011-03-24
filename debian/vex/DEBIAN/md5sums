@@ -1,0 +1,9 @@
+c039afcdf7331e6021f6ab43e1382ba0  usr/share/doc/vex/changelog.Debian.gz
+f80c786fdee88f870f2958caaf614063  usr/share/doc/vex/copyright
+f14e8b3ae74df03a08a7ee6f6046807d  usr/share/doc/vex/README.Debian
+9d695e9a1311c472c1bae644f87b8669  usr/share/dbus-1/services/org.maemo.vex.service
+b83ad03c6c75f00757d4576959962eb6  usr/share/applications/hildon/vex.desktop
+546e839ca1bf47e4d587e5dea2ef50da  usr/local/bin/vex
+b0d0128804c96ca687d95b075002ff94  usr/local/share/icons/hicolor/scalable/hildon/vex.png
+ab0b2f01635fa82a6926d19675ea40dd  usr/local/share/icons/hicolor/40x40/hildon/vex.png
+151528f23dcaefddb7a8a676360a90ec  usr/local/share/icons/hicolor/26x26/hildon/vex.png
