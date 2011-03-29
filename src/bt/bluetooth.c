@@ -114,7 +114,7 @@ void get_info(AppData * data){
 
 	// Allocate the Devices Array
 	data->number_devices = number_devices_found;
-	data->devices = new BluetoothDevice[number_devices_found];
+	data->devices = (BluetoothDevice*) malloc(sizeof(BluetoothDevice)*number_devices_found);
 
 	for (int i = 0; i < number_devices_found; i++) {
 
@@ -156,7 +156,7 @@ void get_info(AppData * data){
 
 		//allocation services array
 		data->devices[i].number_services = number_service_found;
-		data->devices[i].services = new BluetoothService[number_service_found];
+		data->devices[i].services =(BluetoothService*) malloc(sizeof(BluetoothService)*number_service_found);
 
 		// Going thru the services retrived
 		for (int service_index=0; list_services; list_services = list_services->next,service_index++ ) {
@@ -322,34 +322,42 @@ void get_info_BU(AppData * data){
 bool create_comm_connection(AppData* data)
 {
 	struct sockaddr_rc addr = { 0 };
-	int sock, status;
+	int status;
+	data->devconn->bt.thread_Communication = NULL;
 	// allocate a socket
-	sock = socket(AF_BLUETOOTH, SOCK_STREAM, BTPROTO_RFCOMM);
+	data->devconn->bt.sock = socket(AF_BLUETOOTH, SOCK_STREAM, BTPROTO_RFCOMM);
 	// set the connection parameters (who to connect to)
 	addr.rc_family = AF_BLUETOOTH;
 	addr.rc_channel = (uint8_t) data->devconn->bt.service->channel;
 
 	str2ba( data->devconn->bt.device->address , &addr.rc_bdaddr );
 
-	// connect to server
-	status = connect(sock, (struct sockaddr *)&addr, sizeof(addr));
 
-	data->devconn->disconnect = g_cond_new ();
-	data->devconn->bt.sock = sock;
-	data->devconn->bt.thread_recv = NULL;
+
+	// connect to server
+	status = connect(data->devconn->bt.sock, (struct sockaddr *)&addr, sizeof(addr));
 
 	if( status == -1 )
 	{
 		// Erreur
+
 		printf("Erreur %d %s",errno,strerror(errno));
 		char info[50];
 		sprintf(info,"Recv Error : %d %s",errno,strerror(errno) );
 		hildon_banner_show_information((GtkWidget *)data->window_main,NULL,info);
-		close(sock);
+		close(data->devconn->bt.sock);
 		return false;
 	}
 
-	data->devconn->bt.thread_recv = g_thread_create((GThreadFunc) thread_recv_func,data,true,NULL);
+	data->devconn->disconnect = g_cond_new ();
+
+	data->devconn->bt.view_Array_Mut = g_mutex_new ();
+	data->devconn->bt.send_Queue_Mut = g_mutex_new ();
+	data->devconn->bt.thread_Communication_Mut = g_mutex_new ();
+	data->devconn->bt.send_Queue = NULL;
+
+
+	data->devconn->bt.thread_Communication = g_thread_create((GThreadFunc) thread_Communication_Func,data,true,NULL);
 
 	return true;
 
@@ -379,7 +387,7 @@ bool create_loc_serv_record(AppData * data)
 		   *root_list = 0,
 		   *proto_list = 0,
 		   *access_proto_list = 0;
-	sdp_data_t *channel = 0, *psm = 0;
+	sdp_data_t *channel = 0;//*psm = 0;
 
 	sdp_record_t *record = sdp_record_alloc();
 
@@ -417,7 +425,7 @@ bool create_loc_serv_record(AppData * data)
 	sdp_set_info_attr(record, service_name, service_prov, service_dsc);
 
 
-	int err = 0;
+	//int err = 0;
 	sdp_session_t *session = 0;
 
 	// connect to the local SDP server, register the service record, and
@@ -474,7 +482,7 @@ void unregister_loc_serv_record(AppData* data)
 	if( data->locserv_record == NULL)
 		return;
 
-	int err = 0;
+	//int err = 0;
 	sdp_session_t *session = 0;
 	session = sdp_connect(BDADDR_ANY, BDADDR_LOCAL , 0 );
 	if(session != NULL )

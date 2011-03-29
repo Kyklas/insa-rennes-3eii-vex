@@ -10,7 +10,7 @@
 #include <bluetooth/bluetooth.h>
 #include <bluetooth/hci.h>
 #include <bluetooth/hci_lib.h>
-
+#include <errno.h>
 #include <stdlib.h>
 
 #include "btthread.h"
@@ -109,69 +109,207 @@ gchar *convert_utf_string(char *t)
  *
  */
 
-void thread_recv_func(AppData *data)
+void thread_Communication_Func(AppData *data)
 {
-	char buffer[101];
-	int status=0;
-	gchar * out;
-	GtkTextIter  iter;
+	char cmd_Buffer[CMD_MAX_LENGTH];
+	char *send_Buffer;
+	int recv_Status;
+	int send_Status;
+	gboolean ack_Pending=0;
 	GTimeVal  wait;
 
-	GMutex *wait_mut = g_mutex_new ();
+	signed char view_Angle;
+	unsigned char view_Distance;
 
-	g_mutex_lock (wait_mut);
+
+	g_mutex_lock (data->devconn->bt.thread_Communication_Mut);
 	do{
-          while(status != -1)
-          {
-            memset(buffer,0,101);
-		//read(data->devconn->bt.sock,buffer,10);
 
-		status = recv(data->devconn->bt.sock,buffer,100,MSG_DONTWAIT);
+		// First we handle incoming data
+		// Getting the CMD Code
+		recv_Status = recv(data->devconn->bt.sock,cmd_Buffer,1,MSG_DONTWAIT);
 
-		if(status == -1){
-			if(errno!=EAGAIN)
+		//printf("Recv : status : %d error : %d strerror %s\n",recv_Status,errno,strerror(errno));
+
+		if(recv_Status == -1 && errno!=EAGAIN )
+		{
+			// we have an problem
+			printf("Recv Error : %d %s\n",errno,strerror(errno));
+			if( errno == ECONNRESET || errno == ECONNABORTED || errno == ENETRESET )
 			{
-				printf("Recv Error : %d %s",errno,strerror(errno));
-				char info[50];
-				sprintf(info,"Recv Error : %d %s",errno,strerror(errno) );
 				gdk_threads_enter();
-				hildon_banner_show_information((GtkWidget *)data->window_main,NULL,info);
+				gtk_widget_destroy( (GtkWidget *) data->devconn->ui.window) ;
 				gdk_threads_leave();
 			}
-		}
-		else{
-
-			//gtk_text_buffer_get_iter_at_offset (data->devconn->ui.text_buffer,&iter,-1);
-			//gtk_text_buffer_insert(data->devconn->ui.text_buffer,&iter,convert_utf_string(buffer),-1);
-			out = convert_utf_string(buffer);
-
-			//gtk_text_buffer_set_text(data->devconn->ui.text_buffer,out, -1);
-
-			// Make sure we can update user interface without errors
-			gdk_threads_enter();
-
-			/* get end iter */
-			//gtk_text_buffer_get_end_iter (data->devconn->ui.text_buffer, &iter);
-
-			/* add the message to the text buffer */
-			gtk_text_buffer_set_text     (data->devconn->ui.text_buffer, out, status);
-
-			/* scroll to end iter */
-			//gtk_text_view_scroll_to_iter (GTK_TEXT_VIEW (data->devconn->ui.text_view),
-			//					&iter, 0.0, FALSE, 0, 0);
-
-			// Let the main loop take over for user interface
-			gdk_threads_leave();
 
 		}
-          }
+		else if(recv_Status == 1 )
+		{
+			switch(cmd_Buffer[0])
+			{
+				case CMD_DPL :
+					// Getting the CMD data
+					recv_Status = recv(data->devconn->bt.sock,
+									cmd_Buffer,
+									CMD_DPL_LEN,
+									MSG_WAITALL);
+
+					if(recv_Status != CMD_DPL_LEN )
+					{
+						// we have an problem, we didn't get all the data
+						printf("Recv Problem while getting CMD_DPL : %d %s\n",errno,strerror(errno));
+					}
+					else
+					{
+						// I don' know what to do with a deplacment commande for the PDA !!
+						// We keep going
+					}
+					break;
+				case CMD_ENV :
+					// Getting the CMD data
+					recv_Status = recv(data->devconn->bt.sock,
+									cmd_Buffer,
+									CMD_DPL_LEN,
+									MSG_WAITALL);
+
+					if(recv_Status !=  CMD_DPL_LEN)
+					{
+						// we have an problem, we didn't get all the data
+						printf("Recv Problem while getting CMD_DPL : %d %s\n",errno,strerror(errno));
+					}
+					else
+					{
+						// Update the view array
+
+						// Getting acces to the view array
+						g_mutex_lock (data->devconn->bt.view_Array_Mut);
+
+						// the first byte contains the angle
+						view_Angle = (signed char) cmd_Buffer[0];
+						// the second byte contains the distance
+						view_Distance = (unsigned char) cmd_Buffer[1];
+
+						printf("Updating view_Array with [ %d ] = %d\n",(view_Angle+ENV_FOV_HALF),view_Distance);
+
+						if(view_Angle>= -ENV_FOV_HALF && view_Angle<= ENV_FOV_HALF)
+							data->devconn->bt.view_Array[view_Angle+ENV_FOV_HALF]=view_Distance;
+
+						// releasing acces to the view array
+						g_mutex_unlock(data->devconn->bt.view_Array_Mut);
+
+						// TODO check if we invalidate the screen ?
+
+						// adding CMD_ENV_ACK to the send queue
+
+						// Getting acces to the send queue
+						g_mutex_lock (data->devconn->bt.send_Queue_Mut);
+
+						send_Buffer = (char*) malloc(sizeof(char));
+
+						send_Buffer[0] = CMD_ENV_ACK;
+
+						data->devconn->bt.send_Queue = g_slist_append(data->devconn->bt.send_Queue,
+														send_Buffer);
+
+						// releasing acces to the send queue
+						g_mutex_unlock(data->devconn->bt.send_Queue_Mut);
+
+					}
+					break;
+				case CMD_DPL_ACK :
+
+					/*if(ack_Pending)
+						ack_Pending=0;
+
+					break;*/
+				case CMD_ENV_ACK :
+
+					if(ack_Pending)
+						ack_Pending=0;
+
+					printf("Ack recived for %d\n",cmd_Buffer[0]);
+
+					// I don' know what to do with a environement command ACK to the PDA !!
+					// We keep going
+					break;
+
+				default :
+
+				printf("Unknown Commande Recived : %d\n",cmd_Buffer[0]);
+			}
+
+		}
+
+		// Second we handle outgoing data
+
+		// Getting acces to the send queue
+		g_mutex_lock (data->devconn->bt.send_Queue_Mut);
+
+		if(g_slist_length(data->devconn->bt.send_Queue)>0 )
+		{
+			switch(*((char*)data->devconn->bt.send_Queue->data))
+			{
+				case CMD_DPL_ACK :
+				case CMD_ENV_ACK :
+
+					send_Status = send(data->devconn->bt.sock,
+								data->devconn->bt.send_Queue->data,
+								1,
+								0);
+
+					free(data->devconn->bt.send_Queue->data);
+
+					// remove the top element of the queue
+					data->devconn->bt.send_Queue=g_slist_delete_link (data->devconn->bt.send_Queue,
+											data->devconn->bt.send_Queue);
+
+					printf("Ack Sent\n");
+
+					break;
+
+				case CMD_DPL :
+				case CMD_ENV :
+
+					if(ack_Pending)
+						break;
+
+					// TODO Better Handling
+					send_Status = send(data->devconn->bt.sock,
+									data->devconn->bt.send_Queue->data,
+									3,
+									0);
+					printf("Command & Data : %s\n",(char*)data->devconn->bt.send_Queue->data);
+					ack_Pending = 1;
+					printf("Ack Pending");
+					// remove the top element of the queue
+					data->devconn->bt.send_Queue=g_slist_delete_link (data->devconn->bt.send_Queue,
+											data->devconn->bt.send_Queue);
+					break;
+
+				default :
+
+				printf("commande unknown : %d\n",*((char*)data->devconn->bt.send_Queue->data) );
+
+				printf("Command & Data : %s\n",(char*)data->devconn->bt.send_Queue->data);
+				//remove
+				data->devconn->bt.send_Queue=g_slist_delete_link (data->devconn->bt.send_Queue,
+											data->devconn->bt.send_Queue);
+
+			}
+		}
+
+		// releasing acces to the send queue
+		g_mutex_unlock(data->devconn->bt.send_Queue_Mut);
+
+
 		g_get_current_time (&wait);
 		g_time_val_add (&wait,1000);
 
+	}while(!g_cond_timed_wait ( data->devconn->disconnect,
+					data->devconn->bt.thread_Communication_Mut,
+					&wait ));
 
-	}while(!g_cond_timed_wait ( data->devconn->disconnect,wait_mut, &wait ));
-
-	g_mutex_unlock (wait_mut);
+	g_mutex_unlock (data->devconn->bt.thread_Communication_Mut);
 
 	g_cond_free(data->devconn->disconnect);
 	data->devconn->disconnect = NULL;
@@ -179,25 +317,6 @@ void thread_recv_func(AppData *data)
 	return;
 }
 
-
-unsigned char Limit_Mix (int intermediate_value)
-{
-  static int limited_value;
-
-  if (intermediate_value < 2000)
-  {
-    limited_value = 2000;
-  }
-  else if (intermediate_value > 2254)
-  {
-    limited_value = 2254;
-  }
-  else
-  {
-    limited_value = intermediate_value;
-  }
-  return (unsigned char) (limited_value - 2000);
-}
 
 /**
  * \fn void thread_local_server(AppData * data)
@@ -251,7 +370,7 @@ void thread_local_server(AppData * data)
 	data->locserv->disconnect = g_cond_new ();
 
 	g_mutex_lock (wait_mut);
-
+/*
       char read[1];
       unsigned char joy[10];
       char CurrentMode=0;
@@ -261,7 +380,7 @@ void thread_local_server(AppData * data)
       char processMode;
 
 	do{
-
+			/*
             while(addIndex<BUFFER_LEN)
 		{
 
@@ -387,7 +506,7 @@ void thread_local_server(AppData * data)
 		g_time_val_add (&wait,10000);
 
 	}while(!g_cond_timed_wait ( data->locserv->disconnect,wait_mut, &wait ));
-
+*/
 	g_mutex_unlock (wait_mut);
 
 	g_mutex_free(wait_mut);

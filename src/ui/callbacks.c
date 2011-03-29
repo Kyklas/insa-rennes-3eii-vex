@@ -59,7 +59,7 @@ void callback_dev_selected(GtkComboBox * cb_dev_list,AppData * data)
 		create_local_server_interface(data);
 		// 3 - Create the server socket and listen
 		// 	lunch the thread ..
-		data->locserv->bt.thread_recv = g_thread_create((GThreadFunc) thread_local_server,data,true,NULL);
+		data->locserv->bt.thread_Communication = g_thread_create((GThreadFunc) thread_local_server,data,true,NULL);
 
 		hildon_banner_show_information((GtkWidget *)data->window_main,NULL,"Local Server !");
 	}
@@ -193,22 +193,20 @@ void callback_uuid_changed(GtkComboBox * cb_uuid_list,AppData * data){
 
 void callback_connect(GtkToolButton * widget, AppData * data){
 
-	//terminate any other connection
-	// Like we were closing the window
+
 	if(data->devconn != NULL )
 	{
+		//terminate any other connection
+		// Like we were closing the window
 		GdkEventAny* event = new GdkEventAny;
 		event->type=GDK_NOTHING;
 		event->window = (GdkWindow* )data->devconn->ui.window;
-		//event->sent_event = false;
 
 		callback_com_close((GtkWidget *)data->devconn->ui.window,(GdkEvent *)event,data);
 	}
 
-	// Create Communication Interface
-	// It create the devcomm in data
-	create_comm_interface(data);
-
+	//Create device connection data
+	data->devconn = (DeviceConnection*) malloc(sizeof(DeviceConnection));
 
 #ifdef FAST_CONNECT
 
@@ -218,8 +216,8 @@ void callback_connect(GtkToolButton * widget, AppData * data){
 	data->devconn->bt.service = new BluetoothService;
 
 	sprintf(data->devconn->bt.device->address,FAST_CONNECT_ADD);
-	sprintf(data->devconn->bt.device->name , "N810");
-	data->devconn->bt.service->channel = 3;
+	sprintf(data->devconn->bt.device->name , "VEX");
+	data->devconn->bt.service->channel = FAST_CONNECT_CHAN;
 
 #else
 	// updating devcomm with selected device and service
@@ -233,16 +231,16 @@ void callback_connect(GtkToolButton * widget, AppData * data){
 
 #endif
 
-	// Create bluetooth Connection new BluetoothService; //
+	// Create bluetooth Connection
 
-	if(!create_comm_connection(data))
+	if(create_comm_connection(data))
 	{
-		// Failed to create connection, delete the window
-		GdkEventAny* event = new GdkEventAny;
-		event->type=GDK_NOTHING;
-		event->window = (GdkWindow* )data->devconn->ui.window;
-		callback_com_close((GtkWidget *)data->devconn->ui.window,(GdkEvent *)event,data);
+		// Create Communication Interface
+		create_comm_interface(data);
 	}
+
+
+
 
 }
 
@@ -262,8 +260,18 @@ void callback_send (GtkButton *button,AppData * data){
 	if(data->devconn != NULL && button == data->devconn->ui.button)
 	{
 		char * buffer =(char *) gtk_entry_get_text(data->devconn->ui.entry);
+		char * send_buffer = (char*)malloc(sizeof(char)*strlen(buffer));
+		strcpy(send_buffer,buffer);
+		printf(" : %s\n",send_buffer);
+		puts("\n");
+		// Getting acces to the send queue
+		g_mutex_lock (data->devconn->bt.send_Queue_Mut);
 
-		write(data->devconn->bt.sock,buffer,strlen(buffer));
+		data->devconn->bt.send_Queue = g_slist_append(data->devconn->bt.send_Queue,
+										(char*)send_buffer);
+
+		// releasing acces to the send queue
+		g_mutex_unlock (data->devconn->bt.send_Queue_Mut);
 
 		gtk_entry_set_text(data->devconn->ui.entry,"");
 	}
@@ -352,17 +360,22 @@ gboolean callback_hardware_button(GtkWidget * widget, GdkEventKey * event,AppDat
 gboolean callback_com_close(GtkWidget * widget, GdkEvent *event,AppData *data)
 {
 	//terminate any other connection
-
+	puts("callback_com_close\n");
 
 	if( data->devconn !=NULL && widget == (GtkWidget *)data->devconn->ui.window )
 	{
 		// close the recving thread
 		g_cond_signal(data->devconn->disconnect);
-		if(data->devconn->bt.thread_recv != NULL)
+		if(data->devconn->bt.thread_Communication != NULL)
 		{
 			//Waiting for thread
-			g_thread_join(data->devconn->bt.thread_recv);
+			g_thread_join(data->devconn->bt.thread_Communication);
 		}
+
+		g_mutex_free (data->devconn->bt.view_Array_Mut);
+		g_mutex_free (data->devconn->bt.send_Queue_Mut);
+		g_mutex_free (data->devconn->bt.thread_Communication_Mut);
+
 		// close the socket
 		close(data->devconn->bt.sock);
 
@@ -376,7 +389,7 @@ gboolean callback_com_close(GtkWidget * widget, GdkEvent *event,AppData *data)
 		gtk_widget_destroy ((GtkWidget *) data->devconn->ui.window);
 		//free object
 		// TODO : free better
-		delete data->devconn;
+		free(data->devconn);
 		data->devconn = NULL;
 
 	}
@@ -385,11 +398,17 @@ gboolean callback_com_close(GtkWidget * widget, GdkEvent *event,AppData *data)
 	{
 		// close the recving thread
 		g_cond_signal(data->locserv->disconnect);
-		if(data->locserv->bt.thread_recv != NULL)
+		if(data->locserv->bt.thread_Communication != NULL)
 		{
 			//Waiting for thread Local server
-			g_thread_join(data->locserv->bt.thread_recv);
+			g_thread_join(data->locserv->bt.thread_Communication);
 		}
+
+		g_mutex_free (data->locserv->bt.view_Array_Mut);
+		g_mutex_free (data->locserv->bt.send_Queue_Mut);
+		g_mutex_free (data->locserv->bt.thread_Communication_Mut);
+
+
 		// close the socket
 		close(data->locserv->bt.sock);
 
