@@ -47,10 +47,13 @@ void create_user_interface(AppData * data)
 	g_signal_connect(G_OBJECT(data->window_main),
 		"key_press_event", G_CALLBACK(callback_hardware_button),data);
 
+#ifndef FAST_CONNECT
 	create_search_toolbar(data);
 	create_options_toolbar(data);
 	gtk_widget_hide_all((GtkWidget *)data->tb_options);
-
+#else
+	create_services_toolbar(data);
+#endif
 }
 
 /*
@@ -167,6 +170,7 @@ void create_services_toolbar(AppData * data)
 	cb_serv_list = GTK_COMBO_BOX(gtk_combo_box_new_text());
 	data->cb_serv_list = cb_serv_list;
 
+	#ifndef FAST_CONNECT
 
 	// Adding services
 	int device = gtk_combo_box_get_active(data->cb_dev_list);
@@ -191,6 +195,7 @@ void create_services_toolbar(AppData * data)
 		}
 	}
 
+	#endif
 
 	/* Make the ComboBox use all available toolbar space */
 	gtk_tool_item_set_expand(it_serv_list,TRUE);
@@ -284,8 +289,6 @@ void create_comm_interface( AppData * data)
 	GtkHBox * hbox;
 	GtkButton * button;
 
-
-	data->devconn = g_new0(DeviceConnection,1);
 
 	button = (GtkButton *) gtk_button_new_with_label ("Send");
 	data->devconn->ui.button = button;

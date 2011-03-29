@@ -13,7 +13,7 @@
 
 gpointer thread_bluetooth_inquiry(AppData*);
 
-void thread_recv_func(AppData *);
+void thread_Communication_Func(AppData *);
 void thread_local_server(AppData *);
 
 #endif // VEX_BT_THREAD_H

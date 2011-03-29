@@ -34,32 +34,32 @@ vex: $(obj)
 #	@$(RM) $^
 	@echo $@ created in $(binpath)
 
-$(objpath)/main.o: main.c
-	@$(CC) -c $^ -o $@ $(CFLAGS)
+$(objpath)/main.o: main.c appdata.h
+	@$(CC) -c $< -o $@ $(CFLAGS)
 	@echo $@ created.
 
 # User Interface Compiling
 
-$(objpath)/ui/callbacks.o: ui/callbacks.c
-	@$(CC) -c $^ -o $@ $(CFLAGS)
+$(objpath)/ui/callbacks.o: ui/callbacks.c appdata.h
+	@$(CC) -c $< -o $@ $(CFLAGS)
 	@echo $@ created.
 
-$(objpath)/ui/interface.o: ui/interface.c
-	@$(CC) -c $^ -o $@ $(CFLAGS)
+$(objpath)/ui/interface.o: ui/interface.c appdata.h
+	@$(CC) -c $< -o $@ $(CFLAGS)
 	@echo $@ created.
 
-$(objpath)/ui/uithread.o: ui/uithread.c
-	@$(CC) -c $^ -o $@ $(CFLAGS)
+$(objpath)/ui/uithread.o: ui/uithread.c appdata.h
+	@$(CC) -c $< -o $@ $(CFLAGS)
 	@echo $@ created.
 
 # Bluetooth Compiling
 
-$(objpath)/bt/btthread.o: bt/btthread.c
-	@$(CC) -c $^ -o $@ $(CFLAGS)
+$(objpath)/bt/btthread.o: bt/btthread.c appdata.h
+	@$(CC) -c $< -o $@ $(CFLAGS)
 	@echo $@ created.
 
-$(objpath)/bt/bluetooth.o: bt/bluetooth.c
-	@$(CC) -c $^ -o $@ $(CFLAGS)
+$(objpath)/bt/bluetooth.o: bt/bluetooth.c appdata.h
+	@$(CC) -c $< -o $@ $(CFLAGS)
 	@echo $@ created.
 
 
