@@ -56,6 +56,12 @@
 #define CMD_ENV_ACK		0x50
 
 /**
+ * \brief Erreur de Commande 
+ *
+*/
+#define CMD_ERROR				0x00
+
+/**
  * \brief mode environement capteur 1
  *
  */
