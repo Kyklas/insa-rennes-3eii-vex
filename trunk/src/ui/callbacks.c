@@ -83,10 +83,6 @@ void callback_dev_selected(GtkComboBox * cb_dev_list,AppData * data)
 void callback_search_dev (GtkToolButton * it_search , AppData * data)
 {
 
-	create_comm_interface(data);  //TODO check if accurate
-	return;
-
-
 	/* Remove services toolbar */
 	if (data->tb_services != NULL)
 	{
@@ -198,7 +194,7 @@ void callback_connect(GtkToolButton * widget, AppData * data){
 	{
 		//terminate any other connection
 		// Like we were closing the window
-		GdkEventAny* event = new GdkEventAny;
+		GdkEventAny* event =(GdkEventAny*) malloc(sizeof(GdkEventAny));
 		event->type=GDK_NOTHING;
 		event->window = (GdkWindow* )data->devconn->ui.window;
 
@@ -212,8 +208,8 @@ void callback_connect(GtkToolButton * widget, AppData * data){
 
 	hildon_banner_show_information((GtkWidget *)data->window_main,NULL,"Fast Connect !");
 
-	data->devconn->bt.device = new BluetoothDevice;
-	data->devconn->bt.service = new BluetoothService;
+	data->devconn->bt.device =(BluetoothDevice*) malloc(sizeof(BluetoothDevice));
+	data->devconn->bt.service =(BluetoothService*) malloc(sizeof(BluetoothService));
 
 	sprintf(data->devconn->bt.device->address,FAST_CONNECT_ADD);
 	sprintf(data->devconn->bt.device->name , "VEX");
@@ -422,7 +418,7 @@ gboolean callback_com_close(GtkWidget * widget, GdkEvent *event,AppData *data)
 		gtk_widget_destroy ((GtkWidget *) data->locserv->ui.window);
 		//free object
 		// TODO : free better
-		delete data->locserv;
+		free(data->locserv);
 		data->locserv = NULL;
 		//Local Server Closed
 		// Unregister the record
@@ -445,37 +441,18 @@ gboolean callback_com_close(GtkWidget * widget, GdkEvent *event,AppData *data)
 
 gboolean callback_expose (GtkWidget *widget, GdkEventExpose *event, AppData * data)
 {
-
-	gdk_draw_arc (widget->window,
-                widget->style->fg_gc[GTK_WIDGET_STATE (widget)],
-                TRUE,
-                0, 0, widget->allocation.width, widget->allocation.height,
-                0, 64 * 360);
-
 	gdk_draw_line (widget->window,
-                widget->style->fg_gc[GTK_WIDGET_STATE (widget)],
-			210,
-                200,400,600);
-
-	gdk_draw_point(widget->window,
-                widget->style->fg_gc[GTK_WIDGET_STATE (widget)],
-			210,
-                200);
-	gdk_draw_point(widget->window,
-                widget->style->fg_gc[GTK_WIDGET_STATE (widget)],
-			200,
-                210);
-	gdk_draw_point(widget->window,
-                widget->style->fg_gc[GTK_WIDGET_STATE (widget)],
-			210,
-                210);
-	gdk_draw_point(widget->window,
-                widget->style->fg_gc[GTK_WIDGET_STATE (widget)],
-			205,
-                205);
-
-
-
+				widget->style->fg_gc[GTK_WIDGET_STATE (widget)],
+				ENV_WINDOW_ORIGIN_X,
+				0,
+				ENV_WINDOW_ORIGIN_X,
+				widget->allocation.height);
+	gdk_draw_line (widget->window,
+				widget->style->fg_gc[GTK_WIDGET_STATE (widget)],
+				0,
+				ENV_WINDOW_ORIGIN_Y,
+				widget->allocation.width,
+				ENV_WINDOW_ORIGIN_Y);
   return TRUE;
 }
 
@@ -493,89 +470,77 @@ gboolean callback_expose (GtkWidget *widget, GdkEventExpose *event, AppData * da
 
 gboolean callback_mouse (GtkWidget *widget,GdkEvent *event,AppData *data)
 {
-    static unsigned char joyInfo[9];
-    static bool sending =  false;
+	static gboolean pressed = false;
+	static unsigned char* send_buffer = NULL;
+	static double x;
+	static double y;
 	switch (event->type)
 	{
-		case GDK_MOTION_NOTIFY :
 
-		//	gdk_draw_point(widget->window,
-		//			    widget->style->fg_gc[GTK_WIDGET_STATE (widget)],
-		//				(int)((GdkEventMotion*)event)->x,
-		//			    (int)((GdkEventMotion*)event)->y);
-
-		gdk_gc_set_function(widget->style->fg_gc[GTK_WIDGET_STATE (widget)], GDK_INVERT);
-		gdk_draw_line (widget->window,widget->style->fg_gc[GTK_WIDGET_STATE (widget)],
-                                       widget->allocation.width/2,widget->allocation.height/2,
-                                      (int)((GdkEventMotion*)event)->x,
-                                        (int)((GdkEventMotion*)event)->y);
-
-                  double x,y;
-                  x = ((GdkEventMotion*)event)->x - widget->allocation.width/2 + 255 ;
-                  y = ((GdkEventMotion*)event)->y - widget->allocation.height/2 + 255 ;
-                  x/=2;
-                  y/=2;
-
-                  // limit to 0 - 255
-                  if(x<0)
-                      x = 0;
-                  else if(x>255)
-                      x = 255;
-                  if(y<0)
-                      y = 0;
-                  else if(y>255)
-                      y = 255;
-
-
-
-              if(data->devconn != NULL && sending)
-              {
-                    write(data->devconn->bt.sock,(char *)joyInfo,9);
-              }
-
-			break;
 		case GDK_BUTTON_PRESS :
-                  gtk_widget_queue_draw_area      (widget,
-                                              0,
-                                             0,
-                                              800,
-                                              480);
-			break;
-		case GDK_2BUTTON_PRESS :
-			gdk_draw_point(widget->window,
-					    widget->style->fg_gc[GTK_WIDGET_STATE (widget)],
-						(int)((GdkEventMotion*)event)->x,
-					    (int)((GdkEventMotion*)event)->y);
-			break;
-		case GDK_3BUTTON_PRESS :
+			puts("GDK_BUTTON_PRESS");
+			pressed = true;
+			// Keep going, sending the first data
+		case GDK_MOTION_NOTIFY :
+			if (pressed)
+			{
+				send_buffer =(unsigned char*) malloc(sizeof(char)*(1+CMD_DPL_LEN));
+				send_buffer[0] = CMD_DPL;
+
+				gdk_draw_line (widget->window,
+							widget->style->fg_gc[GTK_WIDGET_STATE (widget)],
+							ENV_WINDOW_ORIGIN_X,
+							ENV_WINDOW_ORIGIN_Y,
+							(int)((GdkEventMotion*)event)->x,
+							(int)((GdkEventMotion*)event)->y);
+				x = ((GdkEventMotion*)event)->x - ENV_WINDOW_ORIGIN_X;
+				y = -((GdkEventMotion*)event)->y + ENV_WINDOW_ORIGIN_Y;
+
+				printf("x : %f , y : %f\n",x,y);
+
+				x = x/(widget->allocation.width-ENV_WINDOW_ORIGIN_X) * 128 + 127;
+
+				if( y > 0 )
+				{
+					y = y/(ENV_WINDOW_ORIGIN_Y) * 128 + 127;
+				}
+				else
+				{
+					y = y/(widget->allocation.height-ENV_WINDOW_ORIGIN_Y) * 128 + 127;
+				}
+				printf("Compute x : %f , y : %f\n",x,y);
+
+
+				send_buffer[1]=(unsigned char)x;
+				send_buffer[2]=(unsigned char)y;
+				printf("Buffer : %d %d %d\n",send_buffer[0],send_buffer[1],send_buffer[2]);
+			}
 			break;
 		case GDK_BUTTON_RELEASE :
-
-
-
-
-              if(data->devconn != NULL && sending)
-              {
-                    write(data->devconn->bt.sock,(char *)joyInfo,9);
-                    write(data->devconn->bt.sock,(char *)joyInfo,9);
-                    write(data->devconn->bt.sock,(char *)joyInfo,9);
-              }
-
-                  sending = false;
-
-			break;
-		case GDK_EXPOSE :
-                        GdkGC * gc =  gdk_gc_new (widget->window);
-                        gdk_gc_set_function (gc,GDK_AND);
-                        gdk_draw_line (widget->window,gc,0,widget->allocation.height/2,
-                                        widget->allocation.width,widget->allocation.height/2);
-
-                        gdk_draw_line (widget->window,gc,widget->allocation.width/2,0,
-                                        widget->allocation.width/2,widget->allocation.height);
+			pressed = false;
+			send_buffer =(unsigned char*) malloc(sizeof(char)*(1+CMD_DPL_LEN));
+			send_buffer[0] = CMD_DPL;
+			send_buffer[1]=(unsigned char)127; // idle
+			send_buffer[2]=(unsigned char)127; // idle
 			break;
 		default :
-                        return false;
+			return false;
 	}
+
+	if(send_buffer != NULL )
+	{
+		// Getting acces to the send queue
+		g_mutex_lock (data->devconn->bt.send_Queue_Mut);
+
+		data->devconn->bt.send_Queue = g_slist_append(data->devconn->bt.send_Queue,
+										send_buffer);
+
+		// releasing acces to the send queue
+		g_mutex_unlock(data->devconn->bt.send_Queue_Mut);
+		// Buffer queued, reset pointer
+		send_buffer = NULL;
+	}
+
 	return true;
 }
 

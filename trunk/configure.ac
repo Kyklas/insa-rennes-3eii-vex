@@ -1,18 +1,19 @@
 
 AC_INIT([Vex],[1.0],[stanislasbertrand@gmail.com])
 
-AC_CONFIG_SRCDIR([src/bt/bluetooth.cpp])
-AC_CONFIG_SRCDIR([src/ui/interface.cpp])
-AC_CONFIG_SRCDIR([src/main.cpp])
+AC_LANG(C)
 
-# check for C++ preprocessor and compiler
-AC_PROG_CXXCPP
-AC_PROG_CXX
+AC_CONFIG_SRCDIR([src/bt/bluetooth.c])
+AC_CONFIG_SRCDIR([src/ui/interface.c])
+AC_CONFIG_SRCDIR([src/main.c])
+
+# check for C preprocessor and compiler
+AC_PROG_CC
 
 # automake initialization (mandatory)
 AM_INIT_AUTOMAKE(foreign)
 
-AC_LANG([C++])
+
 
 # Check for library
 PKG_CHECK_MODULES([VEXDEP], [gtk+-2.0 hildon-1 bluez glib-2.0 gthread-2.0 libosso osso-af-settings dbus-glib-1])

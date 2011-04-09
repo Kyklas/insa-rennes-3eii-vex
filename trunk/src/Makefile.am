@@ -2,7 +2,8 @@
 # This is the makefile for the source
 
 # additional include paths necessary to compile the C++ programs
-AM_CXXFLAGS = -I$(top_srcdir)/src @VEXDEP_CFLAGS@
+# AM_CFLAGS = -I$(top_srcdir)/src @VEXDEP_CFLAGS@
+CFLAGS = @VEXDEP_CFLAGS@
 
 ###############################################################################
 # THE PROGRAMS TO BUILD
@@ -13,18 +14,19 @@ bin_PROGRAMS = vex
 
 # list of sources for the 'vex' binary
 vex_SOURCES =    \
-			main.cpp \
+			main.c \
 			appdata.h \
+			communication.h \
 			ui/callbacks.h \
-			ui/callbacks.cpp \
+			ui/callbacks.c \
 			ui/interface.h \
-			ui/interface.cpp \
+			ui/interface.c \
 			ui/uithread.h \
-			ui/uithread.cpp \
+			ui/uithread.c \
 			bt/bluetooth.h \
-			bt/bluetooth.cpp \
+			bt/bluetooth.c \
 			bt/btthread.h \
-			bt/btthread.cpp
+			bt/btthread.c
 
 vex_LDFLAGS = @VEXDEP_LIBS@
 
