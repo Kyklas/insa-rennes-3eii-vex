@@ -33,8 +33,8 @@ gpointer thread_bluetooth_inquiry(AppData* data)
 	get_info(data);
 
 	gtk_combo_box_append_text(data->cb_dev_list,"Local Server");
-
-	for(int i = 0 ;i < data->number_devices;i++ )
+	int i;
+	for(i = 0 ;i < data->number_devices;i++ )
 	{
 		char device[35];
 		sprintf(device,"%s - %s",data->devices[i].name,data->devices[i].address);
@@ -278,9 +278,10 @@ void thread_Communication_Func(AppData *data)
 									data->devconn->bt.send_Queue->data,
 									3,
 									0);
-					printf("Command & Data : %s\n",(char*)data->devconn->bt.send_Queue->data);
+					printf("Command & Data : %d %d %d\n",(int)((char*)data->devconn->bt.send_Queue->data)[0],(int)((char*)data->devconn->bt.send_Queue->data)[1],(int)((char*)data->devconn->bt.send_Queue->data)[2] );
 					ack_Pending = 1;
-					printf("Ack Pending");
+					printf("Ack Pending\n");
+					free(data->devconn->bt.send_Queue->data);
 					// remove the top element of the queue
 					data->devconn->bt.send_Queue=g_slist_delete_link (data->devconn->bt.send_Queue,
 											data->devconn->bt.send_Queue);
@@ -291,6 +292,7 @@ void thread_Communication_Func(AppData *data)
 				printf("commande unknown : %d\n",*((char*)data->devconn->bt.send_Queue->data) );
 
 				printf("Command & Data : %s\n",(char*)data->devconn->bt.send_Queue->data);
+				free(data->devconn->bt.send_Queue->data);
 				//remove
 				data->devconn->bt.send_Queue=g_slist_delete_link (data->devconn->bt.send_Queue,
 											data->devconn->bt.send_Queue);

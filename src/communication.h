@@ -112,3 +112,13 @@
  *
  */
 #define CMD_MAX_LENGTH		3
+/**
+ * \brief Origine x de l'environement dans la fenêtre graphique
+ *
+ */
+#define ENV_WINDOW_ORIGIN_X	400
+/**
+ * \brief Origine y de l'environement dans la fenêtre graphique
+ *
+ */
+#define ENV_WINDOW_ORIGIN_Y	400

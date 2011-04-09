@@ -65,11 +65,10 @@ AUTOCONF = ${SHELL} /home/stanislas/dev/vex-1.0/missing --run autoconf
 AUTOHEADER = ${SHELL} /home/stanislas/dev/vex-1.0/missing --run autoheader
 AUTOMAKE = ${SHELL} /home/stanislas/dev/vex-1.0/missing --run automake-1.8
 AWK = gawk
+CC = gcc
+CCDEPMODE = depmode=gcc3
+CFLAGS = -g -O2
 CPPFLAGS = 
-CXX = g++
-CXXCPP = g++ -E
-CXXDEPMODE = depmode=gcc3
-CXXFLAGS = -g -O2
 CYGPATH_W = echo
 DEFS = -DPACKAGE_NAME=\"Vex\" -DPACKAGE_TARNAME=\"vex\" -DPACKAGE_VERSION=\"1.0\" -DPACKAGE_STRING=\"Vex\ 1.0\" -DPACKAGE_BUGREPORT=\"stanislasbertrand@gmail.com\" -DPACKAGE=\"vex\" -DVERSION=\"1.0\"
 DEPDIR = .deps
@@ -101,9 +100,9 @@ STRIP =
 VERSION = 1.0
 VEXDEP_CFLAGS = -DMAEMO_CHANGES -pthread -I/usr/include/gtk-2.0 -I/usr/lib/gtk-2.0/include -I/usr/include/atk-1.0 -I/usr/include/cairo -I/usr/include/pango-1.0 -I/usr/include/glib-2.0 -I/usr/lib/glib-2.0/include -I/usr/include/freetype2 -I/usr/include/libpng12 -I/usr/include/hildon-1 -I/usr/include/dbus-1.0 -I/usr/lib/dbus-1.0/include  
 VEXDEP_LIBS = -pthread -lhildon-1 -lgtk-x11-2.0 -lgdk-x11-2.0 -latk-1.0 -lgdk_pixbuf-2.0 -lm -lpangocairo-1.0 -lpango-1.0 -lcairo -lgmodule-2.0 -ldl -lbluetooth -lgthread-2.0 -lrt -losso -ldbus-glib-1 -ldbus-1 -lgobject-2.0 -lglib-2.0  
-ac_ct_CXX = g++
-am__fastdepCXX_FALSE = #
-am__fastdepCXX_TRUE = 
+ac_ct_CC = gcc
+am__fastdepCC_FALSE = #
+am__fastdepCC_TRUE = 
 am__include = include
 am__leading_dot = .
 am__quote = 

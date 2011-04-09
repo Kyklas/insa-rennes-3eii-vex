@@ -1,7 +1,7 @@
 Source: vex
 Section: unknown
 Priority: extra
-Maintainer: unknown <stanislasbertrand@gmail.com>
+Maintainer: Stanislas BERTRAND <stanislasbertrand@gmail.com>
 Build-Depends: debhelper (>= 5)
 Standards-Version: 3.7.2
 

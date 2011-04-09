@@ -17,7 +17,7 @@
  * \brief Quand définit, la connection rapide est compilé
  *
  */
-//#define FAST_CONNECT
+#define FAST_CONNECT
 
 /**
  * \def FAST_CONNECT_ADD
@@ -26,9 +26,9 @@
  */
 //#define FAST_CONNECT_ADD "00:0B:CE:02:3C:D5" // Vex
 //#define FAST_CONNECT_CHAN 1
-#define FAST_CONNECT_ADD "00:1D:6E:D4:C8:71" // N810
+//#define FAST_CONNECT_ADD "00:1D:6E:D4:C8:71" // N810
 #define FAST_CONNECT_CHAN 3
-//	#define FAST_CONNECT_ADD "00:11:67:B0:4B:6D"
+#define FAST_CONNECT_ADD "00:11:67:B0:4B:6D"	//Clef Bleu
 
 
 
@@ -43,6 +43,8 @@
 #include <bluetooth/sdp.h>
 #include <bluetooth/sdp_lib.h>
 
+
+enum {false,true};
 
 /**
  * \struct _AppData appdata.h
@@ -96,7 +98,7 @@ struct _DeviceConnection
 		GtkButton *button;
 		HildonWindow *window;
             GtkWidget *drawing_area;
-		bool fullscreen;				/**< Indicateur d'utilisation du mode plein écran*/
+		gboolean fullscreen;				/**< Indicateur d'utilisation du mode plein écran*/
 	}ui;
 
 

@@ -11,7 +11,7 @@
 
 #include "../appdata.h"
 
-#include <cstdio>
+//#include <cstdio>
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -46,9 +46,9 @@ extern int uuid_values[BT_NUMBER_UUID_VALUES];
 
 void get_info(AppData *);
 
-bool create_comm_connection(AppData *);
+gboolean create_comm_connection(AppData *);
 
-bool create_loc_serv_record(AppData *);
+gboolean create_loc_serv_record(AppData *);
 
 void unregister_loc_serv_record(AppData* );
 

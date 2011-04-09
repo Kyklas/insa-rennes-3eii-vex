@@ -95,7 +95,7 @@ void get_info(AppData * data){
 	inquiry_lenght = 8;
 	number_devices_max = 255;
 
-	ii = new inquiry_info[number_devices_max];
+	ii =(inquiry_info*) malloc(sizeof(inquiry_info)*number_devices_max);
 
 	number_devices_found = hci_inquiry(	local_device_id,
 					inquiry_lenght,
@@ -115,8 +115,8 @@ void get_info(AppData * data){
 	// Allocate the Devices Array
 	data->number_devices = number_devices_found;
 	data->devices = (BluetoothDevice*) malloc(sizeof(BluetoothDevice)*number_devices_found);
-
-	for (int i = 0; i < number_devices_found; i++) {
+	int i;
+	for ( i = 0; i < number_devices_found; i++) {
 
 		ba2str(&(ii+i)->bdaddr, data->devices[i].address);
 
@@ -159,7 +159,8 @@ void get_info(AppData * data){
 		data->devices[i].services =(BluetoothService*) malloc(sizeof(BluetoothService)*number_service_found);
 
 		// Going thru the services retrived
-		for (int service_index=0; list_services; list_services = list_services->next,service_index++ ) {
+		int service_index;
+		for (service_index=0; list_services; list_services = list_services->next,service_index++ ) {
 
 			sdp_record_t *service_record = (sdp_record_t*) list_services->data;
 
@@ -312,14 +313,14 @@ void get_info_BU(AppData * data){
 */
 
 /**
- * \fn bool create_comm_connection(AppData* data)
+ * \fn gboolean create_comm_connection(AppData* data)
  * \brief Créer la connection à un périphérique pour la communication
  *
  * \param[in,out] data Donnée du programme
  * \return Retourne l'état de la connection, vrai si établi, faux sinon
  */
 
-bool create_comm_connection(AppData* data)
+gboolean create_comm_connection(AppData* data)
 {
 	struct sockaddr_rc addr = { 0 };
 	int status;
@@ -364,14 +365,14 @@ bool create_comm_connection(AppData* data)
 }
 
 /**
- * \fn bool create_loc_serv_record(AppData * data)
+ * \fn gboolean create_loc_serv_record(AppData * data)
  * \brief Créer le service local
  *
  * \param[in,out] data Donnée du programme
  * \return Retourne l'état du service, vrai si établi, faux sinon
  */
 
-bool create_loc_serv_record(AppData * data)
+gboolean create_loc_serv_record(AppData * data)
 {
 
 

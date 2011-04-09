@@ -6,8 +6,6 @@
  * \date 24 mars 2011
  */
 
-#include <iostream>
-using namespace std;
 
 #include <gtk/gtk.h>
 
@@ -140,6 +138,7 @@ void create_search_toolbar(AppData * data)
 
 void create_services_toolbar(AppData * data)
 {
+	int i;
 	GtkToolbar *tb_services;
 
 	GtkToolItem *it_label;
@@ -188,7 +187,7 @@ void create_services_toolbar(AppData * data)
 	else
 	{
 		device--; // for array matching
-		for(int i=0 ; i < data->devices[device].number_services ; i++)
+		for(i=0 ; i < data->devices[device].number_services ; i++)
 		{
 			gtk_combo_box_append_text(cb_serv_list,data->devices[device].services[i].name );
 
