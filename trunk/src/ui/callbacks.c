@@ -235,9 +235,6 @@ void callback_connect(GtkToolButton * widget, AppData * data){
 		create_comm_interface(data);
 	}
 
-
-
-
 }
 
 /**
@@ -362,6 +359,8 @@ gboolean callback_com_close(GtkWidget * widget, GdkEvent *event,AppData *data)
 	{
 		// close the recving thread
 		g_cond_signal(data->devconn->disconnect);
+		// close the socket
+		close(data->devconn->bt.sock);
 		if(data->devconn->bt.thread_Communication != NULL)
 		{
 			//Waiting for thread

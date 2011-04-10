@@ -98,9 +98,296 @@ gchar *convert_utf_string(char *t)
     return s;
 }
 
+/**
+ * \fn void thread_Vex_Communication_Func(AppData *data)
+ * \brief Gère la communication avec le Vex selon le protocole établit
+ *
+ * \param[in,out] data Donné du programme
+ *
+ * Thread pour recevoir les données de la communication avec le Vex
+ *
+ */
+
+void thread_Vex_Communication_Func(AppData *data)
+{
+	char cmd_Buffer[CMD_MAX_LENGTH];
+	char *send_Buffer;
+	signed char view_Angle;
+	unsigned char view_Distance;
+	int recv_Status;
+	int send_Status;
+	int socket,i;
+	fd_set fd_Read,fd_Write;
+	gboolean running;
+	struct timeval tv;
+
+
+	socket=data->devconn->bt.sock; // create local copy
+
+	FD_ZERO(&fd_Read);
+	FD_ZERO(&fd_Write);
+
+	FD_SET(socket,&fd_Write);
+	FD_SET(socket,&fd_Read);
+
+	running = true;
+
+	tv.tv_sec = 0;
+	tv.tv_usec = 1000;
+
+	while(select(socket+1,&fd_Read,NULL,NULL,&tv)!=-1 && running)
+	{
+		tv.tv_sec = 0;
+		tv.tv_usec = 1000;
+
+		if(FD_ISSET(socket,&fd_Read))
+		{
+			printf("Loop\n");
+			// Data to be retrieved
+			recv_Status = recv(socket,cmd_Buffer,1,MSG_WAITALL);
+			if(recv_Status == -1 )
+			{
+				// we have an problem
+				printf("Recv Error : %d %s\n",errno,strerror(errno));
+				running = false;
+			}
+			else
+			{
+				switch(cmd_Buffer[0])
+				{
+					case CMD_DPL :
+
+						// Send ACK to recive DATA
+
+						send_Buffer = (char*) malloc(sizeof(char));
+
+						send_Buffer[0] = CMD_DPL_ACK;
+
+						send_Status = send(socket,
+									send_Buffer,
+									1,
+									0);
+
+						free(send_Buffer);
+
+						if(send_Status == -1 )
+						{
+							// we have an problem
+							printf("Sending Problem while sending CMD_DPL_ACK : %d %s\n",errno,strerror(errno));
+							running = false;
+						}
+
+
+						// Getting the CMD data
+						recv_Status = recv(socket,
+										cmd_Buffer,
+										CMD_DPL_LEN,
+										MSG_WAITALL);
+
+						if(recv_Status != CMD_DPL_LEN )
+						{
+							// we have an problem, we didn't get all the data
+							printf("Recv Problem while getting CMD_DPL : %d %s\n",errno,strerror(errno));
+							running = false;
+						}
+						else
+						{
+							// I don' know what to do with a deplacment commande for the PDA !!
+							// We keep going
+						}
+						break;
+					case CMD_ENV :
+
+						// Send ACK to recive DATA
+
+						send_Buffer = (char*) malloc(sizeof(char));
+
+						send_Buffer[0] = CMD_ENV_ACK;
+
+						send_Status = send(socket,
+									send_Buffer,
+									1,
+									0);
+
+						free(send_Buffer);
+
+						if(send_Status == -1 )
+						{
+							// we have an problem
+							printf("Sending Problem while sending CMD_ENV_ACK : %d %s\n",errno,strerror(errno));
+							running = false;
+						}
+
+
+						// Getting the CMD data
+						recv_Status = recv(socket,
+										cmd_Buffer,
+										CMD_ENV_LEN,
+										MSG_WAITALL);
+
+						if(recv_Status !=  CMD_ENV_LEN)
+						{
+							// we have an problem, we didn't get all the data
+							printf("Recv Problem while getting CMD_DPL : %d %s\n",errno,strerror(errno));
+							running = false;
+						}
+						else
+						{
+							// Update the view array
+
+							// Getting acces to the view array
+							g_mutex_lock (data->devconn->bt.view_Array_Mut);
+
+							// the first byte contains the angle
+							view_Angle = (signed char) cmd_Buffer[0];
+							// the second byte contains the distance
+							view_Distance = (unsigned char) cmd_Buffer[1];
+
+							printf("Updating view_Array with [ %d ] = %d\n",((view_Angle+ENV_FOV_HALF)/ENV_ANGLE_INC),view_Distance);
+
+							if(view_Angle>= -ENV_FOV_HALF && view_Angle<= ENV_FOV_HALF)
+								data->devconn->bt.view_Array[(view_Angle+ENV_FOV_HALF)/ENV_ANGLE_INC]=view_Distance;
+
+							// releasing acces to the view array
+							g_mutex_unlock(data->devconn->bt.view_Array_Mut);
+
+							// TODO check if we invalidate the screen ?
+
+						}
+						break;
+
+					default :
+
+					printf("Unknown Commande Recived : %d\n",cmd_Buffer[0]);
+
+					// TODO how do I handle this ?
+				}
+			}
+		}
+
+
+
+		if(FD_ISSET(socket,&fd_Write))
+		{
+			// Able to write
+			// Getting acces to the send queue
+			g_mutex_lock (data->devconn->bt.send_Queue_Mut);
+
+			if(g_slist_length(data->devconn->bt.send_Queue)>0 )
+			{
+				switch(*((char*)data->devconn->bt.send_Queue->data))
+				{
+					case CMD_DPL :
+					case CMD_ENV :
+
+						// Sending the command, first byte
+						send_Status = send(socket,
+										data->devconn->bt.send_Queue->data,
+										1,
+										0);
+
+						if(send_Status!=1)
+						{
+							// we have an problem, we didn't send the data correctly
+							printf("Send Problem : %d %s\n",errno,strerror(errno));
+							running = false;
+						}
+						else
+						{
+							// Wait to recive ACK
+							recv_Status = recv(socket,
+										cmd_Buffer,
+										1,
+										MSG_WAITALL);
+							if(recv_Status!=1)
+							{
+								// we have an problem, we didn't send the data correctly
+								printf("Recv Problem while getting ACK : %d %s\n",errno,strerror(errno));
+
+								if(errno !=  ETIMEDOUT )
+								{
+									running = false;
+								}
+
+							}
+							else
+							{
+								if(cmd_Buffer[0] == (((char*)data->devconn->bt.send_Queue->data)[0]|0x10))
+								{
+									// Sending DATA
+									// Copy data into the sending buffer
+
+									send_Buffer =(char*) malloc(sizeof(char)*CMD_DPL_LEN);
+
+									for(i=0;i<CMD_DPL_LEN;i++)
+									{
+										send_Buffer[i]=((char*)data->devconn->bt.send_Queue->data)[i+1];
+									}
+									send_Status = send(socket,
+												send_Buffer,
+												CMD_DPL_LEN,
+												0);
+
+									free(send_Buffer);
+
+									if(send_Status==-1)
+									{
+										// we have an problem, we didn't send the data correctly
+										printf("Send Problem while sending data : %d %s\n",errno,strerror(errno));
+										running = false;
+									}
+								}
+								else
+								{
+									printf("ACK was not recived\n");
+								}
+							}
+						}
+
+
+						printf("Command & Data : %d %d %d\n",(int)((char*)data->devconn->bt.send_Queue->data)[0],(int)((char*)data->devconn->bt.send_Queue->data)[1],(int)((char*)data->devconn->bt.send_Queue->data)[2] );
+
+						// free the data link to the element of the queue
+						free(data->devconn->bt.send_Queue->data);
+						// remove the top element of the queue
+						data->devconn->bt.send_Queue=g_slist_delete_link (data->devconn->bt.send_Queue,
+												data->devconn->bt.send_Queue);
+						break;
+
+					default :
+
+					printf("commande unknown : %d\n",*((char*)data->devconn->bt.send_Queue->data) );
+
+					printf("Command & Data : %s\n",(char*)data->devconn->bt.send_Queue->data);
+					free(data->devconn->bt.send_Queue->data);
+					//remove
+					data->devconn->bt.send_Queue=g_slist_delete_link (data->devconn->bt.send_Queue,
+												data->devconn->bt.send_Queue);
+
+				}
+			}
+
+			// releasing acces to the send queue
+			g_mutex_unlock(data->devconn->bt.send_Queue_Mut);
+		}
+		FD_SET(socket,&fd_Write);
+		FD_SET(socket,&fd_Read);
+	}
+
+	// Select returned -1, Error occured
+	printf("Select returned -1 : %d %s\n",errno,strerror(errno));
+
+
+
+	gdk_threads_enter();
+	gtk_widget_destroy( (GtkWidget *) data->devconn->ui.window) ;
+	gdk_threads_leave();
+
+	return;
+}
 
 /**
- * \fn void thread_recv_func(AppData *data)
+ * \fn void thread_Communication_Func(AppData *data)
  * \brief Obtient les messages de la communication
  *
  * \param[in,out] data Donné du programme
@@ -135,7 +422,7 @@ void thread_Communication_Func(AppData *data)
 		{
 			// we have an problem
 			printf("Recv Error : %d %s\n",errno,strerror(errno));
-			if( errno == ECONNRESET || errno == ECONNABORTED || errno == ENETRESET )
+			if( errno == ECONNRESET || errno == ECONNABORTED || errno == ENETRESET || errno == EBADF )
 			{
 				gdk_threads_enter();
 				gtk_widget_destroy( (GtkWidget *) data->devconn->ui.window) ;
@@ -166,6 +453,25 @@ void thread_Communication_Func(AppData *data)
 					}
 					break;
 				case CMD_ENV :
+
+					// Send ACK
+
+					send_Buffer = (char*) malloc(sizeof(char));
+
+					send_Buffer[0] = CMD_ENV_ACK;
+
+					send_Status = send(data->devconn->bt.sock,
+								send_Buffer,
+								1,
+								0);
+
+					if(send_Status == -1 )
+					{
+						// we have an problem
+						printf("Sending Problem while sending CMD_ENV_ACK : %d %s\n",errno,strerror(errno));
+					}
+
+
 					// Getting the CMD data
 					recv_Status = recv(data->devconn->bt.sock,
 									cmd_Buffer,
@@ -198,21 +504,6 @@ void thread_Communication_Func(AppData *data)
 						g_mutex_unlock(data->devconn->bt.view_Array_Mut);
 
 						// TODO check if we invalidate the screen ?
-
-						// adding CMD_ENV_ACK to the send queue
-
-						// Getting acces to the send queue
-						g_mutex_lock (data->devconn->bt.send_Queue_Mut);
-
-						send_Buffer = (char*) malloc(sizeof(char));
-
-						send_Buffer[0] = CMD_ENV_ACK;
-
-						data->devconn->bt.send_Queue = g_slist_append(data->devconn->bt.send_Queue,
-														send_Buffer);
-
-						// releasing acces to the send queue
-						g_mutex_unlock(data->devconn->bt.send_Queue_Mut);
 
 					}
 					break;

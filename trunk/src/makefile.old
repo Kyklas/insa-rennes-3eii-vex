@@ -9,7 +9,7 @@ PKG_LDFLAGS := $(shell pkg-config --libs $(pkg_packages))
 ADD_CFLAGS := -Wall -g
 
 # Compiler
-CC := g++
+CC := gcc
 
 # Combine flags
 CFLAGS := $(ADD_CFLAGS) $(PKG_CFLAGS) 
