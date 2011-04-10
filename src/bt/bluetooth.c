@@ -347,6 +347,10 @@ gboolean create_comm_connection(AppData* data)
 		sprintf(info,"Recv Error : %d %s",errno,strerror(errno) );
 		hildon_banner_show_information((GtkWidget *)data->window_main,NULL,info);
 		close(data->devconn->bt.sock);
+
+		// TODO better cleanup
+		free(data->devconn);
+		data->devconn = NULL;
 		return false;
 	}
 
@@ -358,7 +362,7 @@ gboolean create_comm_connection(AppData* data)
 	data->devconn->bt.send_Queue = NULL;
 
 
-	data->devconn->bt.thread_Communication = g_thread_create((GThreadFunc) thread_Communication_Func,data,true,NULL);
+	data->devconn->bt.thread_Communication = g_thread_create((GThreadFunc) thread_Vex_Communication_Func,data,true,NULL);
 
 	return true;
 
