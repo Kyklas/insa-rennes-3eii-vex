@@ -25,7 +25,7 @@
  * \brief Consigne de gisement de la tourelle sonar
  * Variable globale declaree dans user_routine_fast.c
 */
-extern volatile char Order_Turret_Angle ;
+ volatile char Order_Turret_Angle ;
 
 /**
  * \var Order_Motor_Left

@@ -39,13 +39,14 @@
 #define INT1_EDG		INTCON2bits.INTEDG2
 
 // Digital Out for pulse
-#define DIGOUT rc_dig_out02
+#define SONAR_IO_OUT		IO2
+#define SONAR_PULSE_OUT		rc_dig_out02
 
 extern unsigned int SonarDistance;
 extern short ValidSonarDistance;
 
-void SonarInit();
-void SonarHandle();
-void SonarPulse();
+void SonarInit(void);
+void SonarHandle(void);
+void SonarPulse(void);
 
 #endif

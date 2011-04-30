@@ -23,6 +23,7 @@
 #include <stdio.h>
 
 #include "../Header/serial_ports.h"
+#include "../Header/turret.h"
 
 #define CODE_VERSION            2     /* Use this def. to keep track of your version # */
 
@@ -230,7 +231,9 @@ void User_Initialization (void)
   /* Initialisation du projet de base */
   //Initialize_Serial_Comms(); 
 
-
+  /* Initialisation de la Tourelle*/
+  
+  turret_Init();
 
   /* Initisalisation du port serie 1 de la lib */
   Init_Serial_Port_One();    

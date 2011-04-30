@@ -59,7 +59,7 @@ unsigned char Cmd_Receive (void);
  * \param[in] Angle Angle de gisement de la tourelle
  * \return TRUE si l'acquittement du PDA est OK, FALSE sinon
 */
-unsigned char Cmd_ENV_Transmit (unsigned char Distance, char Angle);
+unsigned char Order_ENV_Transmit (unsigned char Distance, char Angle);
 
 
 #endif
