@@ -24,11 +24,11 @@
  * \brief Définition de l'adresse pour une connection rapide
  *
  */
-//#define FAST_CONNECT_ADD "00:0B:CE:02:3C:D5" // Vex
-//#define FAST_CONNECT_CHAN 1
+#define FAST_CONNECT_ADD "00:0B:CE:02:3C:D5" // Vex
+#define FAST_CONNECT_CHAN 1
 //#define FAST_CONNECT_ADD "00:1D:6E:D4:C8:71" // N810
-#define FAST_CONNECT_CHAN 3
-#define FAST_CONNECT_ADD "00:11:67:B0:4B:6D"	//Clef Bleu
+//#define FAST_CONNECT_CHAN 3
+//#define FAST_CONNECT_ADD "00:11:67:B0:4B:6D"	//Clef Bleu
 
 
 
@@ -115,7 +115,7 @@ struct _DeviceConnection
 		GMutex *view_Array_Mut;
 		GMutex *send_Queue_Mut;
 		GMutex *thread_Communication_Mut;
-		char view_Array[ENV_FOV/ENV_ANGLE_INC];
+		unsigned char view_Array[ENV_FOV/ENV_ANGLE_INC+1];
 		GSList *send_Queue;
 	}bt;
 };
