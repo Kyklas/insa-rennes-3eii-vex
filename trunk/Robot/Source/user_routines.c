@@ -185,7 +185,7 @@ void User_Initialization (void)
     */
 
 /* SECOND: Configure the number of analog channels. */
-  Set_Number_of_Analog_Channels(TWO_ANALOG);     /* See ifi_aliases.h */
+  Set_Number_of_Analog_Channels(NO_ANALOG);     /* See ifi_aliases.h */
 
 /* THIRD: Set up any extra digital inputs. */
   /* The six INTERRUPTS are already digital inputs. */

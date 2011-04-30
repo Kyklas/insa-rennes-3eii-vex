@@ -29,6 +29,7 @@
 #include "../Header/communication.h"
 #include "../Header/delays.h"
 #include <stdio.h>
+#include <stdlib.h>
 
 /**
  * \var Order_Turret_Angle
@@ -65,6 +66,7 @@ volatile unsigned char CurrentCmd = 0x00;
 */
 extern volatile unsigned char Rx_2_Queue_Byte_Count;
 
+volatile unsigned char Inc = 0;
 
 /*** DEFINE USER VARIABLES AND INITIALIZE THEM HERE ***/
 
@@ -160,6 +162,16 @@ void User_Autonomous_Code(void)
      /* Add your own code here. */
 		
 		/* Si le dernier ordre reçu est différent de CMD_ERROR (0x00) */
+		if (!rc_dig_in01)
+		{
+
+
+
+			pwm01 = 127;
+			pwm02 = 127;
+			while (Rx_2_Queue_Byte_Count)
+				Read_Serial_Port_Two;
+		}
 		if (CurrentCmd != CMD_ERROR)
 		{	
 			/* Ajuster la valeurs des signaux PWM de commande des moteurs */
