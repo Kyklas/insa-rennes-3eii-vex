@@ -14,6 +14,7 @@
 #include <stdlib.h>
 
 #include "btthread.h"
+#include "../ui/interface.h"
 
 #include "bluetooth.h"
 
@@ -120,7 +121,7 @@ void thread_Vex_Communication_Func(AppData *data)
 	fd_set fd_Read,fd_Write;
 	gboolean running;
 	struct timeval tv;
-
+	GdkRectangle invalRect;
 
 	socket=data->devconn->bt.sock; // create local copy
 
@@ -133,12 +134,12 @@ void thread_Vex_Communication_Func(AppData *data)
 	running = true;
 
 	tv.tv_sec = 0;
-	tv.tv_usec = 1000;
+	tv.tv_usec = 10;
 
 	while(select(socket+1,&fd_Read,NULL,NULL,&tv)!=-1 && running)
 	{
 		tv.tv_sec = 0;
-		tv.tv_usec = 1000;
+		tv.tv_usec = 10;
 
 		if(FD_ISSET(socket,&fd_Read))
 		{
@@ -199,7 +200,7 @@ void thread_Vex_Communication_Func(AppData *data)
 					case CMD_ENV :
 
 						// Send ACK to recive DATA
-
+						printf("sending ACK for env\n");
 						send_Buffer = (char*) malloc(sizeof(char));
 
 						send_Buffer[0] = CMD_ENV_ACK;
@@ -220,6 +221,7 @@ void thread_Vex_Communication_Func(AppData *data)
 
 
 						// Getting the CMD data
+						printf("reciving data for env\n");
 						recv_Status = recv(socket,
 										cmd_Buffer,
 										CMD_ENV_LEN,
@@ -239,19 +241,31 @@ void thread_Vex_Communication_Func(AppData *data)
 							g_mutex_lock (data->devconn->bt.view_Array_Mut);
 
 							// the first byte contains the angle
-							view_Angle = (signed char) cmd_Buffer[0];
+							view_Angle = (signed char) cmd_Buffer[1];
 							// the second byte contains the distance
-							view_Distance = (unsigned char) cmd_Buffer[1];
+							view_Distance = (unsigned char) cmd_Buffer[0];
+
+							printf("Distance : %x \nAngle : %x \n",view_Distance,view_Angle);
+
+							view_Angle = view_Angle*100/255;
 
 							printf("Updating view_Array with [ %d ] = %d\n",((view_Angle+ENV_FOV_HALF)/ENV_ANGLE_INC),view_Distance);
 
-							if(view_Angle>= -ENV_FOV_HALF && view_Angle<= ENV_FOV_HALF)
+						/*	if(view_Angle>= -ENV_FOV_HALF && view_Angle<= ENV_FOV_HALF)
 								data->devconn->bt.view_Array[(view_Angle+ENV_FOV_HALF)/ENV_ANGLE_INC]=view_Distance;
-
+						*/
 							// releasing acces to the view array
 							g_mutex_unlock(data->devconn->bt.view_Array_Mut);
 
-							// TODO check if we invalidate the screen ?
+							invalRect.x=0;
+							invalRect.y=0;
+							invalRect.width = DRAWING_AREA_WIDTH;
+							invalRect.height = DRAWING_AREA_HEIGTH;
+
+							printf("\n ## invalidate rect ## \n\n");
+
+							gdk_window_invalidate_rect ((data->devconn->ui.drawing_area->window),&invalRect,TRUE);
+
 
 						}
 						break;
@@ -294,6 +308,9 @@ void thread_Vex_Communication_Func(AppData *data)
 						}
 						else
 						{
+
+							printf("Waiting to recv ack for command %d\n",((char*)data->devconn->bt.send_Queue->data)[0]);
+
 							// Wait to recive ACK
 							recv_Status = recv(socket,
 										cmd_Buffer,
@@ -317,6 +334,8 @@ void thread_Vex_Communication_Func(AppData *data)
 									// Sending DATA
 									// Copy data into the sending buffer
 
+									printf("ACK was RECIEVED , ack : %X \n",cmd_Buffer[0]);
+
 									send_Buffer =(char*) malloc(sizeof(char)*CMD_DPL_LEN);
 
 									for(i=0;i<CMD_DPL_LEN;i++)
@@ -339,7 +358,8 @@ void thread_Vex_Communication_Func(AppData *data)
 								}
 								else
 								{
-									printf("ACK was not recived\n");
+									printf("ACK was not recived , ack : %X \n",cmd_Buffer[0]);
+
 								}
 							}
 						}
@@ -378,10 +398,12 @@ void thread_Vex_Communication_Func(AppData *data)
 	printf("Select returned -1 : %d %s\n",errno,strerror(errno));
 
 
-
-	gdk_threads_enter();
-	gtk_widget_destroy( (GtkWidget *) data->devconn->ui.window) ;
-	gdk_threads_leave();
+	if(!running)
+	{
+		gdk_threads_enter();
+		gtk_widget_destroy( (GtkWidget *) data->devconn->ui.window) ;
+		gdk_threads_leave();
+	}
 
 	return;
 }

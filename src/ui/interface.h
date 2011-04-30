@@ -11,6 +11,11 @@
 
 #include "../appdata.h"
 
+#define SCREEN_ORIGIN_X 350
+#define SCREEN_ORIGIN_Y 400
+#define DRAWING_AREA_WIDTH 700
+#define DRAWING_AREA_HEIGTH 480
+
 AppData * create_data();
 void create_user_interface(AppData *);
 void create_search_toolbar(AppData *);

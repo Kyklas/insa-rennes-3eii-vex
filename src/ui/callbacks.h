@@ -44,6 +44,7 @@ gboolean callback_mouse (GtkWidget *widget,GdkEvent *event,AppData *data);
 //GDK_Return
 gboolean callback_entry_keys(GtkWidget *entry,GdkEventKey *event,AppData *data);
 
-
+// Com STOP ( Fullscrean )
+gboolean callback_com_stop(GtkWidget * widget, GdkEvent *event,AppData *data);
 
 #endif // VEX_CALLBACKS_H

@@ -13,6 +13,8 @@
 #include "../bt/btthread.h"
 #include "interface.h"
 #include "../bt/bluetooth.h"
+#include <math.h>
+#include "../communication.h"
 
 
 /**
@@ -336,6 +338,38 @@ gboolean callback_hardware_button(GtkWidget * widget, GdkEventKey * event,AppDat
 	return false;
 }
 
+/**
+ * \fn gboolean callback_com_stop(GtkWidget * widget, GdkEvent *event,AppData *data)
+ * \brief Boutton STOP du mode plein ecran, clicked, communication terminer
+ *
+ * \param[in] widget Fenêtre de l'évenement
+ * \param[in] event Evenement occouru.
+ * \param[in,out] data Donné du programme
+ *
+ * Renvoie une demande a callback_com_close
+ *
+ */
+
+// The communication need to be terminated
+gboolean callback_com_stop(GtkWidget * widget, GdkEvent *event,AppData *data)
+{
+
+	GdkEventAny* event_send =(GdkEventAny*) malloc(sizeof(GdkEventAny));
+	event_send->type=GDK_NOTHING;
+	event_send->window = (GdkWindow* )data->devconn->ui.window;
+
+	callback_com_close((GtkWidget *)data->devconn->ui.window,(GdkEvent *)event_send,data);
+
+	/*// shutdown communication
+		shutdown(data->devconn->bt.sock,SHUT_RDWR );
+
+		// close the socket
+		close(data->devconn->bt.sock);
+*/
+
+	return TRUE;
+}
+
 
 /**
  * \fn gboolean callback_com_close(GtkWidget * widget, GdkEvent *event,AppData *data)
@@ -357,22 +391,29 @@ gboolean callback_com_close(GtkWidget * widget, GdkEvent *event,AppData *data)
 
 	if( data->devconn !=NULL && widget == (GtkWidget *)data->devconn->ui.window )
 	{
+		puts("Close dev conn\n");
 		// close the recving thread
-		g_cond_signal(data->devconn->disconnect);
+		if(data->devconn->disconnect != NULL)
+			g_cond_signal(data->devconn->disconnect);
+		puts("Shutdown\n");
+		// shutdown communication
+		shutdown(data->devconn->bt.sock,SHUT_RDWR );
+
 		// close the socket
 		close(data->devconn->bt.sock);
+		puts("Close dev conn thread\n");
 		if(data->devconn->bt.thread_Communication != NULL)
 		{
 			//Waiting for thread
 			g_thread_join(data->devconn->bt.thread_Communication);
 		}
-
+		puts("Close dev conn thread closed\n");
 		g_mutex_free (data->devconn->bt.view_Array_Mut);
 		g_mutex_free (data->devconn->bt.send_Queue_Mut);
 		g_mutex_free (data->devconn->bt.thread_Communication_Mut);
 
 		// close the socket
-		close(data->devconn->bt.sock);
+		//close(data->devconn->bt.sock);
 
 		//remove the old user interface
 
@@ -440,7 +481,25 @@ gboolean callback_com_close(GtkWidget * widget, GdkEvent *event,AppData *data)
 
 gboolean callback_expose (GtkWidget *widget, GdkEventExpose *event, AppData * data)
 {
-	gdk_draw_line (widget->window,
+
+	unsigned char * view_Array;
+
+	if(!g_mutex_trylock (data->devconn->bt.view_Array_Mut))
+	{
+		printf("Mutex Locked\n\n");
+		return FALSE;
+	}
+
+
+	view_Array = data->devconn->bt.view_Array;
+
+	puts("callback_expose !!!\n\n");
+
+	g_mutex_unlock (data->devconn->bt.view_Array_Mut);
+
+	return TRUE;
+
+	/*gdk_draw_line (widget->window,
 				widget->style->fg_gc[GTK_WIDGET_STATE (widget)],
 				ENV_WINDOW_ORIGIN_X,
 				0,
@@ -451,8 +510,81 @@ gboolean callback_expose (GtkWidget *widget, GdkEventExpose *event, AppData * da
 				0,
 				ENV_WINDOW_ORIGIN_Y,
 				widget->allocation.width,
-				ENV_WINDOW_ORIGIN_Y);
-  return TRUE;
+				ENV_WINDOW_ORIGIN_Y);*/
+
+
+/*	srand(time(NULL));
+	  int i;
+	  for (i=0; i<= ENV_FOV/ENV_ANGLE_INC; i++)
+	  {
+		view_Array[i] = rand()%50 + 200;
+		printf("val %d = %d\n",i,view_Array[i]);  // pk nb négatif ??
+	  }
+*/
+
+	// création d'un tableau de points à partir de view_Array
+	GdkPoint tab_points[ENV_FOV/ENV_ANGLE_INC+2];
+	int j;
+	for (j=0; j<= ENV_FOV/ENV_ANGLE_INC; j++)
+	{
+		tab_points[j].x=SCREEN_ORIGIN_X+(int)(view_Array[j]*350/255)*cos((2*3.14/360)*(j*ENV_ANGLE_INC+10));  // x = r.cos(a)
+		tab_points[j].y=SCREEN_ORIGIN_Y-(int)(view_Array[j]*350/255)*sin((2*3.14/360)*(j*ENV_ANGLE_INC+10));  // y = r.sin(a)
+	}
+	tab_points[j].x=SCREEN_ORIGIN_X;
+	tab_points[j].y=SCREEN_ORIGIN_Y;
+
+	// Graphic Context
+	GdkColor BLANC;
+	BLANC.pixel = 0;
+	BLANC.red = 0xFFFF;
+	BLANC.green = 0xFFFF;
+	BLANC.blue = 0xFFFF;
+	GdkColor GRIS;
+	GRIS.pixel = 0;
+	GRIS.red = 0xAAAA;
+	GRIS.green = 0xAAAA;
+	GRIS.blue = 0xAAAA;
+	GdkColor NOIR;
+	NOIR.pixel = 32;
+	NOIR.red = 0;
+	NOIR.green = 0;
+	NOIR.blue = 0;
+
+	gdk_gc_set_function(widget->style->fg_gc[GTK_WIDGET_STATE (widget)],GDK_COPY);
+	gdk_gc_set_rgb_fg_color (widget->style->fg_gc[GTK_WIDGET_STATE (widget)], &NOIR);
+	gdk_gc_set_line_attributes (widget->style->fg_gc[GTK_WIDGET_STATE (widget)],
+				  1, GDK_LINE_SOLID, GDK_CAP_PROJECTING, GDK_JOIN_MITER);
+
+	// dessiner les arcs, lignes, points...
+	printf("Drawing window !!!\n");
+	gdk_draw_arc (widget->window,
+		widget->style->fg_gc[GTK_WIDGET_STATE (widget)],
+		TRUE,
+		0, 50, widget->allocation.width, widget->allocation.width,
+		64 * (180-ENV_FOV)/2, 64 * ENV_FOV);
+	gdk_gc_set_rgb_fg_color (widget->style->fg_gc[GTK_WIDGET_STATE (widget)], &BLANC);
+	gdk_draw_polygon (widget->window, widget->style->fg_gc[GTK_WIDGET_STATE (widget)],
+				  TRUE,
+				  tab_points,
+				  18);
+	gdk_gc_set_rgb_fg_color (widget->style->fg_gc[GTK_WIDGET_STATE (widget)], &GRIS);
+	gdk_draw_line(widget->window, widget->style->fg_gc[GTK_WIDGET_STATE (widget)],
+				  0,SCREEN_ORIGIN_Y,
+				  widget->allocation.width,SCREEN_ORIGIN_Y);
+	gdk_draw_line(widget->window, widget->style->fg_gc[GTK_WIDGET_STATE (widget)],
+				  SCREEN_ORIGIN_X, 0,
+				  SCREEN_ORIGIN_X, widget->allocation.height);
+	gdk_draw_line(widget->window, widget->style->fg_gc[GTK_WIDGET_STATE (widget)],
+				  SCREEN_ORIGIN_X,SCREEN_ORIGIN_Y,
+				  SCREEN_ORIGIN_X+350*cos((2*3.14/360)*(180-ENV_FOV)/2),SCREEN_ORIGIN_Y-350*sin((2*3.14/360)*(180-ENV_FOV)/2));
+	gdk_draw_line(widget->window, widget->style->fg_gc[GTK_WIDGET_STATE (widget)],
+				  SCREEN_ORIGIN_X,SCREEN_ORIGIN_Y,
+				  SCREEN_ORIGIN_X+350*cos((2*3.14/360)*(180-(180-ENV_FOV)/2)),SCREEN_ORIGIN_Y-350*sin((2*3.14/360)*(180-(180-ENV_FOV)/2)));
+	gdk_gc_set_rgb_fg_color (widget->style->fg_gc[GTK_WIDGET_STATE (widget)], &NOIR);
+
+	g_mutex_unlock (data->devconn->bt.view_Array_Mut);
+
+	return TRUE;
 }
 
 /**
@@ -471,8 +603,9 @@ gboolean callback_mouse (GtkWidget *widget,GdkEvent *event,AppData *data)
 {
 	static gboolean pressed = false;
 	static unsigned char* send_buffer = NULL;
-	static double x;
-	static double y;
+	static float x;
+	static float y;
+
 	switch (event->type)
 	{
 
@@ -483,36 +616,59 @@ gboolean callback_mouse (GtkWidget *widget,GdkEvent *event,AppData *data)
 		case GDK_MOTION_NOTIFY :
 			if (pressed)
 			{
-				send_buffer =(unsigned char*) malloc(sizeof(char)*(1+CMD_DPL_LEN));
-				send_buffer[0] = CMD_DPL;
-
-				gdk_draw_line (widget->window,
-							widget->style->fg_gc[GTK_WIDGET_STATE (widget)],
-							ENV_WINDOW_ORIGIN_X,
-							ENV_WINDOW_ORIGIN_Y,
-							(int)((GdkEventMotion*)event)->x,
-							(int)((GdkEventMotion*)event)->y);
-				x = ((GdkEventMotion*)event)->x - ENV_WINDOW_ORIGIN_X;
-				y = -((GdkEventMotion*)event)->y + ENV_WINDOW_ORIGIN_Y;
-
-				printf("x : %f , y : %f\n",x,y);
-
-				x = x/(widget->allocation.width-ENV_WINDOW_ORIGIN_X) * 128 + 127;
-
-				if( y > 0 )
+				// Getting acces to the send queue
+				if(g_mutex_trylock(data->devconn->bt.send_Queue_Mut))
 				{
-					y = y/(ENV_WINDOW_ORIGIN_Y) * 128 + 127;
-				}
-				else
-				{
-					y = y/(widget->allocation.height-ENV_WINDOW_ORIGIN_Y) * 128 + 127;
-				}
-				printf("Compute x : %f , y : %f\n",x,y);
 
+					gdk_gc_set_line_attributes (widget->style->fg_gc[GTK_WIDGET_STATE (widget)],
+					  1, GDK_LINE_ON_OFF_DASH, GDK_CAP_PROJECTING, GDK_JOIN_MITER);
 
-				send_buffer[1]=(unsigned char)x;
-				send_buffer[2]=(unsigned char)y;
-				printf("Buffer : %d %d %d\n",send_buffer[0],send_buffer[1],send_buffer[2]);
+					gdk_gc_set_function(widget->style->fg_gc[GTK_WIDGET_STATE (widget)],GDK_INVERT);
+
+					gdk_draw_line (widget->window,
+								widget->style->fg_gc[GTK_WIDGET_STATE (widget)],
+								SCREEN_ORIGIN_X,
+								SCREEN_ORIGIN_Y,
+								(int)((GdkEventMotion*)event)->x,
+								(int)((GdkEventMotion*)event)->y);
+					x = ((GdkEventMotion*)event)->x - SCREEN_ORIGIN_X;
+					y = -((GdkEventMotion*)event)->y + SCREEN_ORIGIN_Y;
+
+					//printf("x : %f , y : %f\n",x,y);
+
+					x = x/(widget->allocation.width-SCREEN_ORIGIN_X) * 128 + 127;
+
+					if( y > 0 )
+					{
+						y = y/(SCREEN_ORIGIN_Y) * 128 + 127;
+					}
+					else
+					{
+						y = y/(widget->allocation.height-SCREEN_ORIGIN_Y) * 128 + 127;
+					}
+					//printf("Compute x : %f , y : %f\n",x,y);
+
+					if(x>255)
+					{
+						x=255;
+					}
+
+					send_buffer =(unsigned char*) malloc(sizeof(char)*(1+CMD_DPL_LEN));
+					send_buffer[0] = CMD_DPL;
+
+					send_buffer[1]=(unsigned char)x;
+					send_buffer[2]=(unsigned char)y;
+
+					//printf("Buffer : %d %d %d\n",send_buffer[0],send_buffer[1],send_buffer[2]);
+
+					data->devconn->bt.send_Queue = g_slist_append(data->devconn->bt.send_Queue,
+												send_buffer);
+
+					// releasing acces to the send queue
+					g_mutex_unlock(data->devconn->bt.send_Queue_Mut);
+					// Buffer queued, reset pointer
+					send_buffer = NULL;
+				}
 			}
 			break;
 		case GDK_BUTTON_RELEASE :
@@ -521,23 +677,20 @@ gboolean callback_mouse (GtkWidget *widget,GdkEvent *event,AppData *data)
 			send_buffer[0] = CMD_DPL;
 			send_buffer[1]=(unsigned char)127; // idle
 			send_buffer[2]=(unsigned char)127; // idle
+
+			g_mutex_lock(data->devconn->bt.send_Queue_Mut);
+
+			data->devconn->bt.send_Queue = g_slist_append(data->devconn->bt.send_Queue,
+												send_buffer);
+
+					// releasing acces to the send queue
+			g_mutex_unlock(data->devconn->bt.send_Queue_Mut);
+					// Buffer queued, reset pointer
+			send_buffer = NULL;
+
 			break;
 		default :
 			return false;
-	}
-
-	if(send_buffer != NULL )
-	{
-		// Getting acces to the send queue
-		g_mutex_lock (data->devconn->bt.send_Queue_Mut);
-
-		data->devconn->bt.send_Queue = g_slist_append(data->devconn->bt.send_Queue,
-										send_buffer);
-
-		// releasing acces to the send queue
-		g_mutex_unlock(data->devconn->bt.send_Queue_Mut);
-		// Buffer queued, reset pointer
-		send_buffer = NULL;
 	}
 
 	return true;

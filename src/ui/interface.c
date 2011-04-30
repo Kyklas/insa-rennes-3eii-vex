@@ -347,14 +347,41 @@ void create_comm_interface( AppData * data)
 void display_comm_interface( AppData * data)
 {
 	static GtkWidget *drawing_area;
+	GtkWidget *VBox = NULL;
+	static GtkWidget *HBox = NULL;
+	GtkWidget *Button[4];
+	GtkWidget *Separator = NULL;
+	GdkColor NOIR;
+      NOIR.pixel = 32;
+      NOIR.red = 0;
+      NOIR.green = 0;
+      NOIR.blue = 0;
+
+
 	// Base on the state of the window the ui is different.
 	if (data->devconn->ui.fullscreen)
 	{
 		g_object_ref (data->devconn->ui.vbox);
 		gtk_container_remove(GTK_CONTAINER(data->devconn->ui.window),GTK_WIDGET(data->devconn->ui.vbox));
 
+		/* Création d'une HBOX dans laquelle on insère une drawing_area et une VBOX contenant des boutons */
+		HBox = gtk_hbox_new(FALSE, 0);
+		gtk_container_add(GTK_CONTAINER(data->devconn->ui.window), HBox);
+		VBox = gtk_vbox_new(TRUE, 0);
+		//boutons
+		Button[0] = gtk_button_new_with_label("Bt 1");
+		Button[1] = gtk_button_new_with_label("STOP");
+
+		g_signal_connect(G_OBJECT(Button[1]), "clicked",
+			G_CALLBACK( callback_com_stop ),data);
+
+		gtk_box_pack_start(GTK_BOX(VBox), Button[0], TRUE, FALSE, 0);
+		gtk_box_pack_start(GTK_BOX(VBox), Button[1], TRUE, FALSE, 0);
+
 		drawing_area = gtk_drawing_area_new ();
-		gtk_widget_set_size_request (drawing_area, 100, 100);
+		data->devconn->ui.drawing_area = drawing_area;
+		gtk_widget_set_size_request (drawing_area, DRAWING_AREA_WIDTH, DRAWING_AREA_HEIGTH);
+
 		g_signal_connect (G_OBJECT (drawing_area),
 					"expose_event",
 					G_CALLBACK (callback_expose), data); //TODO CHECK if accurate
@@ -368,19 +395,24 @@ void display_comm_interface( AppData * data)
 					"button_release_event",
 					G_CALLBACK(callback_mouse), data);
 
-		gtk_widget_set_events(drawing_area,
+		gtk_widget_set_events(GTK_WIDGET(drawing_area),
 						GDK_EXPOSURE_MASK |
 						GDK_BUTTON_PRESS_MASK |
 						GDK_BUTTON_RELEASE_MASK |
 						GDK_POINTER_MOTION_MASK);
 
 
+		gtk_box_pack_start(GTK_BOX(HBox), drawing_area, TRUE, FALSE, 0);
+		//séparateur
+		Separator = gtk_vseparator_new();
+		gtk_box_pack_start(GTK_BOX(HBox), Separator, TRUE, FALSE, 1);
+		//VBOX
+		gtk_box_pack_start(GTK_BOX(HBox), VBox, TRUE, TRUE, 0);
 
-		gtk_container_add(GTK_CONTAINER(data->devconn->ui.window),GTK_WIDGET(drawing_area));
 	}
 	else
 	{
-		gtk_container_remove(GTK_CONTAINER(data->devconn->ui.window),GTK_WIDGET(drawing_area));
+		gtk_container_remove(GTK_CONTAINER(data->devconn->ui.window),GTK_WIDGET(HBox));
 		gtk_container_add(GTK_CONTAINER(data->devconn->ui.window),GTK_WIDGET(data->devconn->ui.vbox));
 
 	}
