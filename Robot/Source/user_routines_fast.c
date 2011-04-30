@@ -25,18 +25,14 @@
 #include "../Header/user_routines.h"
 #include "../Header/ifi_picdefs.h"
 #include "../Header/serial_ports.h"
-#include "../Header/Orders.h"
+#include "../Header/orders.h"
 #include "../Header/communication.h"
 #include "../Header/delays.h"
+#include "../Header/sonar.h"
+#include "../Header/turret.h"
 #include <stdio.h>
 #include <stdlib.h>
 
-/**
- * \var Order_Turret_Angle
- * \brief Consigne de gisement de la tourelle sonar
- * Variable globale partagee avec orders.c
-*/
-volatile char Order_Turret_Angle = 0x00;
 
 /**
  * \var Order_Motor_Left
@@ -66,7 +62,7 @@ volatile unsigned char CurrentCmd = 0x00;
 */
 extern volatile unsigned char Rx_2_Queue_Byte_Count;
 
-volatile unsigned char Inc = 0;
+
 
 /*** DEFINE USER VARIABLES AND INITIALIZE THEM HERE ***/
 
@@ -89,9 +85,8 @@ void InterruptVectorLow (void)
  * 		  Contient la gestion des commandes recues - Interruption sur le port serie 2
 */
 void InterruptHandlerLow ()     
-{           
-	unsigned char CMD;                
-  unsigned char int_byte;      
+{                        
+    unsigned char int_byte;      
     if (PIR1bits.RC1IF && PIE1bits.RC1IE) // rx1 interrupt?
 	{
 		#ifdef ENABLE_SERIAL_PORT_ONE_RX
@@ -121,6 +116,7 @@ void InterruptHandlerLow ()
 		#endif
 	}
 
+	SonarHandle();
      
   if (INTCON3bits.INT2IF && INTCON3bits.INT2IE)       /* The INT2 pin is RB2/DIG I/O 1. */
   { 
@@ -159,25 +155,36 @@ void User_Autonomous_Code(void)
     {
       	Getdata(&rxdata);   /* DO NOT DELETE, or you will be stuck here forever! */
 
-     /* Add your own code here. */
 		
-		/* Si le dernier ordre reçu est différent de CMD_ERROR (0x00) */
 		if (!rc_dig_in01)
 		{
-
-
-
 			pwm01 = 127;
 			pwm02 = 127;
-			while (Rx_2_Queue_Byte_Count)
-				Read_Serial_Port_Two;
+			pwm03 = 127;
+			while (Serial_Port_Two_Byte_Count())
+				Read_Serial_Port_Two();
 		}
-		if (CurrentCmd != CMD_ERROR)
-		{	
-			/* Ajuster la valeurs des signaux PWM de commande des moteurs */
-			pwm01 = Limit_Mix(2000 + Order_Motor_Left + Order_Motor_Right - 127);
-			pwm02 = Limit_Mix(2000 + Order_Motor_Left - Order_Motor_Right + 127);
+		else
+		{
+			
+			/* Si le dernier ordre reçu est différent de CMD_ERROR (0x00) */
+			if (CurrentCmd != CMD_ERROR)
+			{	
+				/* Ajuster la valeurs des signaux PWM de commande des moteurs */
+				pwm01 = Limit_Mix(2000 + Order_Motor_Left + Order_Motor_Right - 127);
+				pwm02 = Limit_Mix(2000 + Order_Motor_Left - Order_Motor_Right + 127);
+			}
+			
+			//if(!rc_dig_in06)
+				turret_handle();	
 		}
+		
+		
+		if(!rc_dig_in06)
+		{
+			printf("Appuyer ! \n\r");
+		}
+		
 			
       	Putdata(&txdata);   /* DO NOT DELETE, or you will get no PWM outputs! */
     }

@@ -17,8 +17,11 @@
 unsigned int SonarDistance;
 short ValidSonarDistance;
 
-void SonarInit()
+void SonarInit(void)
 {
+	SONAR_IO_OUT = OUTPUT; // define the IO pin as an OUPUT
+	SONAR_PULSE_OUT = 0;   // NO sonar emition
+	
 	// Edge falling interrupt 1 detection
 	INT1_EDG = 0;
 	INT1_PRY =0;
@@ -27,7 +30,7 @@ void SonarInit()
 	// timer 1 interrupt priority low
 	T1_IP = 0; 
 }
-void SonarHandle()
+void SonarHandle(void)
 {
 	if (  T1_IF && T1_IE )
 	{
@@ -52,7 +55,7 @@ void SonarHandle()
 	}
 	
 }
-void SonarPulse()
+void SonarPulse(void)
 {
 	if(! T1_ON )
     {
@@ -65,7 +68,7 @@ void SonarPulse()
 		TMR1H = 0xFB;
 	    TMR1L = 0x1D;
 	    // Send pulse
-	    DIGOUT = 1 ;
+	    SONAR_PULSE_OUT = 1 ;
 		// Timer 1 ON
 	    T1_ON = 1 ; 
 		// wait for timer 1 overflow which count 20 us 
@@ -73,7 +76,7 @@ void SonarPulse()
 		//reset timer flag
 	    T1_IF = 0 ;
 		// stop sending pulse
-	    DIGOUT = 0 ;
+	    SONAR_PULSE_OUT = 0 ;
 		//enable timer 1 interrupt
 	    T1_IE = 1 ; 
 	    // Enable interrupt 1
