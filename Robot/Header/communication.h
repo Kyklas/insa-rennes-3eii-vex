@@ -96,17 +96,17 @@
  * \brief field of view for the environment
  *
  */
-#define ENV_FOV                 160
+#define ENV_FOV                 100
 /**
  * \brief Half of the field of view for the environment
  *
  */
-#define ENV_FOV_HALF            80
+#define ENV_FOV_HALF            50
 /**
  * \brief Incrément pour le parcours du FOV
  *
  */
-#define ENV_ANGLE_INC           10
+#define ENV_ANGLE_INC           5
 /**
  * \brief Longeur Maximun d'une commande, code et données incluses
  *
