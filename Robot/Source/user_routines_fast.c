@@ -161,6 +161,11 @@ void User_Autonomous_Code(void)
 			pwm01 = 127;
 			pwm02 = 127;
 			pwm03 = 127;
+			
+			T1_IF = 0;
+			INT1_FLG = 0;
+			T1_ON = 0;
+			
 			while (Serial_Port_Two_Byte_Count())
 				Read_Serial_Port_Two();
 		}
@@ -177,12 +182,6 @@ void User_Autonomous_Code(void)
 			
 			//if(!rc_dig_in06)
 				turret_handle();	
-		}
-		
-		
-		if(!rc_dig_in06)
-		{
-			printf("Appuyer ! \n\r");
 		}
 		
 			
