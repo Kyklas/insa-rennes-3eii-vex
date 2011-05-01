@@ -140,13 +140,13 @@ unsigned char Cmd_Receive (void)
 	{	/* Si la commande reçue est une commande de déplacement */
 		case CMD_DPL :
 		{	/* Attend la réception d'un nouvel octet sur le port série 2 */
-			while (!PIR3bits.RC2IF);
+			while (!PIR3bits.RC2IF && rc_dig_in01);
 			
 			/* Traite l'interruption sur le port série 2 */
 			Rx_2_Int_Handler();
 			
 			/* Attend la réception d'un nouvel octet sur le port série 2 */
-			while (!PIR3bits.RC2IF);
+			while (!PIR3bits.RC2IF && rc_dig_in01);
 			
 			/* Traite l'interruption sur le port série 2 */
 			Rx_2_Int_Handler();
@@ -164,7 +164,7 @@ unsigned char Cmd_Receive (void)
 		/* Si la commande reçue est une commande d'environnement */
 		case CMD_ENV :  
 		{	/* Attend la réception d'un nouvel octet sur le port série 2 */
-			while (!PIR3bits.RC2IF);
+			while (!PIR3bits.RC2IF && rc_dig_in01);
 			
 			/* Traite l'interruption sur le port série 2 */
 			Rx_2_Int_Handler();
