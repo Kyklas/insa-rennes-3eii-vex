@@ -69,6 +69,8 @@ void turret_handle(void)
 			
 			if(! (ValidSonarDistance && SonarDistance>5) )
 				nb_acq--;
+			else
+				printf((char *)"SonarDistance : %d\n\r",SonarDistance);
 			
 			if(ValidSonarDistance || nb_acq<=0)
 				turret_etat = emmition;
@@ -77,9 +79,9 @@ void turret_handle(void)
 		case emmition :
 			
 			if(ValidSonarDistance && SonarDistance>5)
-				Order_ENV_Transmit(SonarDistance,SERVO_TURRET);
+				while(!ENV_Data_Transmit(SonarDistance,SERVO_TURRET));
 			else
-				Order_ENV_Transmit(200,SERVO_TURRET);
+				while(!ENV_Data_Transmit(255,SERVO_TURRET));
 			
 			turret_etat = deplacement;
 			break;

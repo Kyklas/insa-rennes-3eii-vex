@@ -140,13 +140,13 @@ unsigned char Cmd_Receive (void)
 	{	/* Si la commande reçue est une commande de déplacement */
 		case CMD_DPL :
 		{	/* Attend la réception d'un nouvel octet sur le port série 2 */
-			while (!PIR3bits.RC2IF && rc_dig_in01);
+			while (!PIR3bits.RC2IF);
 			
 			/* Traite l'interruption sur le port série 2 */
 			Rx_2_Int_Handler();
 			
 			/* Attend la réception d'un nouvel octet sur le port série 2 */
-			while (!PIR3bits.RC2IF && rc_dig_in01);
+			while (!PIR3bits.RC2IF);
 			
 			/* Traite l'interruption sur le port série 2 */
 			Rx_2_Int_Handler();
@@ -164,7 +164,7 @@ unsigned char Cmd_Receive (void)
 		/* Si la commande reçue est une commande d'environnement */
 		case CMD_ENV :  
 		{	/* Attend la réception d'un nouvel octet sur le port série 2 */
-			while (!PIR3bits.RC2IF && rc_dig_in01);
+			while (!PIR3bits.RC2IF);
 			
 			/* Traite l'interruption sur le port série 2 */
 			Rx_2_Int_Handler();
@@ -185,6 +185,42 @@ unsigned char Cmd_Receive (void)
 	/* Retourne la commande reçue */
 	return (CMD);	
 }
+
+
+unsigned char ENV_Data_Transmit (unsigned char Distance, char Angle)
+{
+	unsigned char Ack;
+	
+	/* Envoi l'octet de commande d'environnement */
+	Write_Serial_Port_Two(CMD_ENV);
+	
+	/*Attente de la reception de l'acknowledge*/
+	while(!(Serial_Port_Two_Byte_Count()>=1));
+	
+	/* Lecture de l'acquittement */
+	Ack = Read_Serial_Port_Two();
+	printf((char *)"ENV_Data_Transmit Ack : %X\n\r",Ack);
+	/* Si l'acquittement reçu correspond à un acquittement de commande d'environnement */
+	if (Ack == CMD_ENV_ACK)
+	{
+		Write_Serial_Port_Two(Distance);
+		Write_Serial_Port_Two((unsigned char)Angle);
+				
+		/* Attend que le buffer d'envoi soit vide */
+		while(PIE3bits.TX2IE);
+		
+		return TRUE;
+	}
+	else
+	{
+		Write_Serial_Port_Two(CMD_ERROR);
+		
+		/* Attend que le buffer d'envoi soit vide */
+		while(PIE3bits.TX2IE);
+		
+		return FALSE;
+	}
+}	
 
 /**
  * \fn unsigned char Order_ENV_Transmit (unsigned char Distance, char Angle)
