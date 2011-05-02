@@ -25,5 +25,7 @@ void create_comm_interface( AppData *);
 void display_comm_interface( AppData * );
 void create_local_server_interface( AppData *);
 void display_local_server_interface( AppData * );
+void info_display(char * info,GtkWidget * window,const char * file,int line);
+#define INFO_DISP(info,window) info_display(info,window,__FUNCTION__,__LINE__)
 
 #endif // VEX_INTERFACE_H

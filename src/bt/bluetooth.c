@@ -333,8 +333,6 @@ gboolean create_comm_connection(AppData* data)
 
 	str2ba( data->devconn->bt.device->address , &addr.rc_bdaddr );
 
-
-
 	// connect to server
 	status = connect(data->devconn->bt.sock, (struct sockaddr *)&addr, sizeof(addr));
 
@@ -361,8 +359,10 @@ gboolean create_comm_connection(AppData* data)
 	data->devconn->bt.thread_Communication_Mut = g_mutex_new ();
 	data->devconn->bt.send_Queue = NULL;
 
+	printf("create conn lock \n");
+	g_mutex_lock (data->devconn->bt.thread_Communication_Mut);
 
-	data->devconn->bt.thread_Communication = g_thread_create((GThreadFunc) thread_Vex_Communication_Func,data,true,NULL);
+	data->devconn->bt.thread_Communication = g_thread_create((GThreadFunc) thread_Communication_Func,data,true,NULL);
 
 	return true;
 

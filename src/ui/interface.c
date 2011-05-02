@@ -54,6 +54,14 @@ void create_user_interface(AppData * data)
 #endif
 }
 
+void info_display(char * info,GtkWidget * window,const char * file,int line)
+{
+	static char msg[100];
+	printf("%s @ %s %d \nErrno : %d ( %s )\n",info,file,line,errno,strerror(errno) );
+	sprintf(msg,"%s Errno : %d (%s)",info,errno,strerror(errno));
+	hildon_banner_show_information(window,NULL,msg);
+}
+
 /*
 * search toolbar for bluetooth device search
 * Content : search, options, progress, device list, close
@@ -341,6 +349,7 @@ void create_comm_interface( AppData * data)
 
 	data->devconn->ui.vbox = vbox;
 	data->devconn->ui.text_view =(GtkTextView *) view;
+	data->devconn->ui.fullscreen = TRUE;
 	display_comm_interface(data);
 }
 
