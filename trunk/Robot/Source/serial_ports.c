@@ -637,7 +637,7 @@ unsigned char Serial_Port_Two_Byte_Count(void)
 
 	// okay, we have a local copy of the byte count, so turn the 
 	// serial port interrupt back on.
-//	PIE3bits.RC2IE = 1;
+	PIE3bits.RC2IE = 1;
 
 	// return the byte count
 	return(temp);
@@ -770,7 +770,7 @@ unsigned char Read_Serial_Port_Two(void)
 
 		// okay, we're done using Rx_2_Queue_Write_Index, so turn the serial port
 		// interrupt back on.
-//		PIE3bits.RC2IE = 1;
+		PIE3bits.RC2IE = 1;
 
  		// Since we've just removed a byte to the queue, it can't possibly be full.
 		// Again, this is quicker than using an if() statement every time

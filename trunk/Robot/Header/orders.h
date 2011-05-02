@@ -62,4 +62,6 @@ unsigned char Cmd_Receive (void);
 unsigned char Order_ENV_Transmit (unsigned char Distance, char Angle);
 
 
+unsigned char ENV_Data_Transmit (unsigned char Distance, char Angle);
+
 #endif
