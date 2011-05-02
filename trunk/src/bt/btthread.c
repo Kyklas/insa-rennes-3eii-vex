@@ -113,43 +113,45 @@ void thread_Vex_Communication_Func(AppData *data)
 {
 	char cmd_Buffer[CMD_MAX_LENGTH];
 	char *send_Buffer;
-	signed char view_Angle;
+	unsigned char view_Angle;
 	unsigned char view_Distance;
 	int recv_Status;
 	int send_Status;
-	int socket,i;
+	int i;
 	fd_set fd_Read,fd_Write;
 	gboolean running;
 	struct timeval tv;
-	GdkRectangle invalRect;
-
-	socket=data->devconn->bt.sock; // create local copy
 
 	FD_ZERO(&fd_Read);
 	FD_ZERO(&fd_Write);
 
-	FD_SET(socket,&fd_Write);
-	FD_SET(socket,&fd_Read);
+	FD_SET(data->devconn->bt.sock,&fd_Write);
+	FD_SET(data->devconn->bt.sock,&fd_Read);
 
 	running = true;
 
 	tv.tv_sec = 0;
 	tv.tv_usec = 10;
 
-	while(select(socket+1,&fd_Read,NULL,NULL,&tv)!=-1 && running)
+	/*Waiting to have display fonctiontial*/
+	printf("bt thread lock \n");
+	g_mutex_lock (data->devconn->bt.thread_Communication_Mut);
+	printf("Running \n");
+
+	while(select(data->devconn->bt.sock+1,&fd_Read,NULL,NULL,&tv)!=-1 && running)
 	{
 		tv.tv_sec = 0;
 		tv.tv_usec = 10;
 
-		if(FD_ISSET(socket,&fd_Read))
+		if(FD_ISSET(data->devconn->bt.sock,&fd_Read))
 		{
-			printf("Loop\n");
 			// Data to be retrieved
-			recv_Status = recv(socket,cmd_Buffer,1,MSG_WAITALL);
+			recv_Status = recv(data->devconn->bt.sock,cmd_Buffer,1,MSG_WAITALL);
 			if(recv_Status == -1 )
 			{
-				// we have an problem
-				printf("Recv Error : %d %s\n",errno,strerror(errno));
+				gdk_threads_enter();
+				INFO_DISP("Thread Comm, Recv",(GtkWidget *)data->devconn->ui.window);
+				gdk_threads_leave();
 				running = false;
 			}
 			else
@@ -164,7 +166,7 @@ void thread_Vex_Communication_Func(AppData *data)
 
 						send_Buffer[0] = CMD_DPL_ACK;
 
-						send_Status = send(socket,
+						send_Status = send(data->devconn->bt.sock,
 									send_Buffer,
 									1,
 									0);
@@ -174,13 +176,15 @@ void thread_Vex_Communication_Func(AppData *data)
 						if(send_Status == -1 )
 						{
 							// we have an problem
-							printf("Sending Problem while sending CMD_DPL_ACK : %d %s\n",errno,strerror(errno));
+							gdk_threads_enter();
+							INFO_DISP("Thread Comm, Sending CMD_DPL_ACK",(GtkWidget *)data->devconn->ui.window);
+							gdk_threads_leave();
 							running = false;
 						}
 
 
 						// Getting the CMD data
-						recv_Status = recv(socket,
+						recv_Status = recv(data->devconn->bt.sock,
 										cmd_Buffer,
 										CMD_DPL_LEN,
 										MSG_WAITALL);
@@ -188,7 +192,9 @@ void thread_Vex_Communication_Func(AppData *data)
 						if(recv_Status != CMD_DPL_LEN )
 						{
 							// we have an problem, we didn't get all the data
-							printf("Recv Problem while getting CMD_DPL : %d %s\n",errno,strerror(errno));
+							gdk_threads_enter();
+							INFO_DISP("Thread Comm, Recv CMD_DPL",(GtkWidget *)data->devconn->ui.window);
+							gdk_threads_leave();
 							running = false;
 						}
 						else
@@ -200,12 +206,11 @@ void thread_Vex_Communication_Func(AppData *data)
 					case CMD_ENV :
 
 						// Send ACK to recive DATA
-						printf("sending ACK for env\n");
 						send_Buffer = (char*) malloc(sizeof(char));
 
 						send_Buffer[0] = CMD_ENV_ACK;
 
-						send_Status = send(socket,
+						send_Status = send(data->devconn->bt.sock,
 									send_Buffer,
 									1,
 									0);
@@ -215,14 +220,15 @@ void thread_Vex_Communication_Func(AppData *data)
 						if(send_Status == -1 )
 						{
 							// we have an problem
-							printf("Sending Problem while sending CMD_ENV_ACK : %d %s\n",errno,strerror(errno));
+							gdk_threads_enter();
+							INFO_DISP("Thread Comm, Sending CMD_ENV_ACK",(GtkWidget *)data->devconn->ui.window);
+							gdk_threads_leave();
 							running = false;
 						}
 
 
 						// Getting the CMD data
-						printf("reciving data for env\n");
-						recv_Status = recv(socket,
+						recv_Status = recv(data->devconn->bt.sock,
 										cmd_Buffer,
 										CMD_ENV_LEN,
 										MSG_WAITALL);
@@ -230,7 +236,9 @@ void thread_Vex_Communication_Func(AppData *data)
 						if(recv_Status !=  CMD_ENV_LEN)
 						{
 							// we have an problem, we didn't get all the data
-							printf("Recv Problem while getting CMD_DPL : %d %s\n",errno,strerror(errno));
+							gdk_threads_enter();
+							INFO_DISP("Thread Comm, Recv CMD_ENV",(GtkWidget *)data->devconn->ui.window);
+							gdk_threads_leave();
 							running = false;
 						}
 						else
@@ -241,35 +249,32 @@ void thread_Vex_Communication_Func(AppData *data)
 							g_mutex_lock (data->devconn->bt.view_Array_Mut);
 
 							// the first byte contains the angle
-							view_Angle = (signed char) cmd_Buffer[1];
+							view_Angle = (unsigned char) cmd_Buffer[1];
 							// the second byte contains the distance
 							view_Distance = (unsigned char) cmd_Buffer[0];
 
-							printf("Distance : %x \nAngle : %x \n",view_Distance,view_Angle);
+							view_Angle = view_Angle*100/256;
 
-							view_Angle = view_Angle*100/255;
+							puts("Update\n");
+							printf("Angle : %d \n",view_Angle);
+							printf("Updating view_Array with [ %d ] = %d\n",(unsigned int)(view_Angle/ENV_ANGLE_INC),view_Distance);
 
-							printf("Updating view_Array with [ %d ] = %d\n",((view_Angle+ENV_FOV_HALF)/ENV_ANGLE_INC),view_Distance);
+							if(view_Angle<=ENV_FOV)
+								data->devconn->bt.view_Array[(unsigned int)(view_Angle/ENV_ANGLE_INC)]=view_Distance;
 
-						/*	if(view_Angle>= -ENV_FOV_HALF && view_Angle<= ENV_FOV_HALF)
-								data->devconn->bt.view_Array[(view_Angle+ENV_FOV_HALF)/ENV_ANGLE_INC]=view_Distance;
-						*/
 							// releasing acces to the view array
 							g_mutex_unlock(data->devconn->bt.view_Array_Mut);
 
-							invalRect.x=0;
-							invalRect.y=0;
-							invalRect.width = DRAWING_AREA_WIDTH;
-							invalRect.height = DRAWING_AREA_HEIGTH;
-
-							printf("\n ## invalidate rect ## \n\n");
-
-							gdk_window_invalidate_rect ((data->devconn->ui.drawing_area->window),&invalRect,TRUE);
-
+							gdk_threads_enter();
+							gdk_window_invalidate_rect ((data->devconn->ui.drawing_area->window),NULL,TRUE);
+							gdk_threads_leave();
 
 						}
 						break;
+					case CMD_ERROR :
 
+
+						break;
 					default :
 
 					printf("Unknown Commande Recived : %d\n",cmd_Buffer[0]);
@@ -281,7 +286,7 @@ void thread_Vex_Communication_Func(AppData *data)
 
 
 
-		if(FD_ISSET(socket,&fd_Write))
+		if(FD_ISSET(data->devconn->bt.sock,&fd_Write))
 		{
 			// Able to write
 			// Getting acces to the send queue
@@ -295,7 +300,7 @@ void thread_Vex_Communication_Func(AppData *data)
 					case CMD_ENV :
 
 						// Sending the command, first byte
-						send_Status = send(socket,
+						send_Status = send(data->devconn->bt.sock,
 										data->devconn->bt.send_Queue->data,
 										1,
 										0);
@@ -303,7 +308,9 @@ void thread_Vex_Communication_Func(AppData *data)
 						if(send_Status!=1)
 						{
 							// we have an problem, we didn't send the data correctly
-							printf("Send Problem : %d %s\n",errno,strerror(errno));
+							gdk_threads_enter();
+							INFO_DISP("Thread Comm, Sending CMD",(GtkWidget *)data->devconn->ui.window);
+							gdk_threads_leave();
 							running = false;
 						}
 						else
@@ -311,55 +318,90 @@ void thread_Vex_Communication_Func(AppData *data)
 
 							printf("Waiting to recv ack for command %d\n",((char*)data->devconn->bt.send_Queue->data)[0]);
 
-							// Wait to recive ACK
-							recv_Status = recv(socket,
-										cmd_Buffer,
-										1,
-										MSG_WAITALL);
-							if(recv_Status!=1)
+							FD_SET(data->devconn->bt.sock,&fd_Read);
+
+							tv.tv_sec = 0;
+							tv.tv_usec = 100000;
+
+							recv_Status=select(data->devconn->bt.sock+1,&fd_Read,NULL,NULL,&tv);
+
+
+							if(recv_Status==-1)
 							{
 								// we have an problem, we didn't send the data correctly
-								printf("Recv Problem while getting ACK : %d %s\n",errno,strerror(errno));
+								gdk_threads_enter();
+								INFO_DISP("Thread Comm, Recv CMD ACK",(GtkWidget *)data->devconn->ui.window);
+								gdk_threads_leave();
+							}
+							else if( recv_Status == 0)
+							{
+								// Select has timed out !!
 
-								if(errno !=  ETIMEDOUT )
-								{
-									running = false;
-								}
-
+								gdk_threads_enter();
+								INFO_DISP("Thread Comm, Recv CMD ACK Timed Out",(GtkWidget *)data->devconn->ui.window);
+								gdk_threads_leave();
 							}
 							else
 							{
-								if(cmd_Buffer[0] == (((char*)data->devconn->bt.send_Queue->data)[0]|0x10))
+								// Reciving ack
+								recv_Status = recv(data->devconn->bt.sock,
+											cmd_Buffer,
+											1,
+											0);
+								if(recv_Status!=1)
 								{
-									// Sending DATA
-									// Copy data into the sending buffer
+									// we have an problem, we didn't send the data correctly
+									gdk_threads_enter();
+									INFO_DISP("Thread Comm, Recv CMD ACK",(GtkWidget *)data->devconn->ui.window);
+									gdk_threads_leave();
 
-									printf("ACK was RECIEVED , ack : %X \n",cmd_Buffer[0]);
-
-									send_Buffer =(char*) malloc(sizeof(char)*CMD_DPL_LEN);
-
-									for(i=0;i<CMD_DPL_LEN;i++)
+									if(errno !=  ETIMEDOUT )
 									{
-										send_Buffer[i]=((char*)data->devconn->bt.send_Queue->data)[i+1];
-									}
-									send_Status = send(socket,
-												send_Buffer,
-												CMD_DPL_LEN,
-												0);
-
-									free(send_Buffer);
-
-									if(send_Status==-1)
-									{
-										// we have an problem, we didn't send the data correctly
-										printf("Send Problem while sending data : %d %s\n",errno,strerror(errno));
 										running = false;
 									}
+
 								}
 								else
 								{
-									printf("ACK was not recived , ack : %X \n",cmd_Buffer[0]);
+									if(cmd_Buffer[0] == (((char*)data->devconn->bt.send_Queue->data)[0]|0x10))
+									{
+										// Sending DATA
+										// Copy data into the sending buffer
 
+										printf("ACK was RECIEVED , ack : %X \n",cmd_Buffer[0]);
+
+										send_Buffer =(char*) malloc(sizeof(char)*CMD_DPL_LEN);
+
+										for(i=0;i<CMD_DPL_LEN;i++)
+										{
+											send_Buffer[i]=((char*)data->devconn->bt.send_Queue->data)[i+1];
+										}
+										send_Status = send(data->devconn->bt.sock,
+													send_Buffer,
+													CMD_DPL_LEN,
+													0);
+
+										free(send_Buffer);
+
+										if(send_Status==-1)
+										{
+											// we have an problem, we didn't send the data correctly
+											gdk_threads_enter();
+											INFO_DISP("Thread Comm, Send CMD DATA",(GtkWidget *)data->devconn->ui.window);
+											gdk_threads_leave();
+											running = false;
+										}
+									}
+									else
+									{
+										printf("ACK was not recived , ack : %X \n",cmd_Buffer[0]);
+
+										send_Status = send(data->devconn->bt.sock,
+													send_Buffer,
+													CMD_DPL_LEN,
+													0);
+
+									}
 								}
 							}
 						}
@@ -390,20 +432,13 @@ void thread_Vex_Communication_Func(AppData *data)
 			// releasing acces to the send queue
 			g_mutex_unlock(data->devconn->bt.send_Queue_Mut);
 		}
-		FD_SET(socket,&fd_Write);
-		FD_SET(socket,&fd_Read);
+		FD_SET(data->devconn->bt.sock,&fd_Write);
+		FD_SET(data->devconn->bt.sock,&fd_Read);
 	}
 
 	// Select returned -1, Error occured
-	printf("Select returned -1 : %d %s\n",errno,strerror(errno));
-
-
-	if(!running)
-	{
-		gdk_threads_enter();
-		gtk_widget_destroy( (GtkWidget *) data->devconn->ui.window) ;
-		gdk_threads_leave();
-	}
+	//printf("Select returned -1 : %d %s\n",errno,strerror(errno));
+	g_mutex_unlock (data->devconn->bt.thread_Communication_Mut);
 
 	return;
 }
@@ -646,7 +681,8 @@ void thread_Communication_Func(AppData *data)
 void thread_local_server(AppData * data)
 {
 	struct sockaddr_rc loc_addr = { 0 }, rem_addr = { 0 };
-	int s, bytes_read;
+	int s;
+	//int bytes_read;
 	socklen_t opt = sizeof(rem_addr);
 
 	// allocate socket
@@ -669,9 +705,9 @@ void thread_local_server(AppData * data)
 
 	 #define BUFFER_LEN 20
       char buffer[BUFFER_LEN];
-	int status;
+	/*int status;
 	gchar * out;
-	GtkTextIter  iter;
+	GtkTextIter  iter;*/
 
 	ba2str( &rem_addr.rc_bdaddr, buffer );
 	fprintf(stderr, "accepted connection from %s\n", buffer);
@@ -679,7 +715,7 @@ void thread_local_server(AppData * data)
 	memset(buffer, 0, sizeof(buffer));
 
 
-	GTimeVal  wait;
+	//GTimeVal  wait;
 	GMutex *wait_mut = g_mutex_new ();
 
 	data->locserv->disconnect = g_cond_new ();
@@ -695,7 +731,7 @@ void thread_local_server(AppData * data)
       char processMode;
 
 	do{
-			/*
+
             while(addIndex<BUFFER_LEN)
 		{
 
