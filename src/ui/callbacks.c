@@ -599,7 +599,7 @@ gboolean callback_mouse (GtkWidget *widget,GdkEvent *event,AppData *data)
 				// Getting acces to the send queue
 				if(g_mutex_trylock(data->devconn->bt.send_Queue_Mut))
 				{
-					printf("PRESSED : Delpacement Data Adding\n");
+					//printf("PRESSED : Delpacement Data Adding\n");
 
 					gdk_gc_set_line_attributes (widget->style->fg_gc[GTK_WIDGET_STATE (widget)],
 					  1, GDK_LINE_ON_OFF_DASH, GDK_CAP_PROJECTING, GDK_JOIN_MITER);
@@ -641,6 +641,16 @@ gboolean callback_mouse (GtkWidget *widget,GdkEvent *event,AppData *data)
 					send_buffer[2]=(unsigned char)y;
 
 					//printf("Buffer : %d %d %d\n",send_buffer[0],send_buffer[1],send_buffer[2]);
+
+					// Emptiing the queue
+					while(data->devconn->bt.send_Queue!=NULL)
+					{
+						// free the data link to the element of the queue
+						free(data->devconn->bt.send_Queue->data);
+						// remove the top element of the queue
+						data->devconn->bt.send_Queue=g_slist_delete_link (data->devconn->bt.send_Queue,
+												data->devconn->bt.send_Queue);
+					}
 
 					data->devconn->bt.send_Queue = g_slist_append(data->devconn->bt.send_Queue,
 												send_buffer);

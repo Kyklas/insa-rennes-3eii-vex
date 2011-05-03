@@ -362,7 +362,7 @@ gboolean create_comm_connection(AppData* data)
 	printf("create conn lock \n");
 	g_mutex_lock (data->devconn->bt.thread_Communication_Mut);
 
-	data->devconn->bt.thread_Communication = g_thread_create((GThreadFunc) thread_Communication_Func,data,true,NULL);
+	data->devconn->bt.thread_Communication = g_thread_create((GThreadFunc) thread_Vex_Communication_Func,data,true,NULL);
 
 	return true;
 
