@@ -78,12 +78,12 @@ void turret_handle(void)
 			break;
 		case emmition :
 			
-			if(ValidSonarDistance && SonarDistance>5)
-				while(!ENV_Data_Transmit(SonarDistance,SERVO_TURRET));
-			else
-				while(!ENV_Data_Transmit(255,SERVO_TURRET));
-			
-			turret_etat = deplacement;
+			if(!(ValidSonarDistance && SonarDistance>5))
+				SonarDistance = 255;
+				
+			if(ENV_Data_Transmit(SonarDistance,SERVO_TURRET))
+				turret_etat = deplacement;
+				
 			break;
 		case deplacement :
 			angle = angle + angle_inc;
@@ -106,11 +106,17 @@ void turret_handle(void)
 			
 			if(wait<=0)
 			{
-				wait = 10;	
+				wait = 10;
+				nb_acq = 3;	
 				turret_etat = acquisition;
 			}
 			break;
 		
 	}	
+	
+	if (!rc_dig_in01)
+	{
+		turret_etat = acquisition;
+	}
 	
 }	
