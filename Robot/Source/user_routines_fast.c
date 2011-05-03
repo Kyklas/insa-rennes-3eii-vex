@@ -33,30 +33,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-
-/**
- * \var Order_Motor_Left
- * \brief Consigne de vitesse du moteur gauche
- * Variable globale partagee avec orders.c
-*/
-volatile unsigned char Order_Motor_Left = 0x00;
-
-/**
- * \var Order_Motor_Right
- * \brief Consigne de vitesse du moteur droit
- * Variable globale partagee avec orders.c
-*/
-volatile unsigned char Order_Motor_Right = 0x00;
-
-/**
- * \var CurrentCmd
- * \brief Derniere commande recue
- * Variable globale partagee par plusieurs fonction de ce fichier
-*/
-volatile unsigned char CurrentCmd = 0x00;
-
-
-
 /*** DEFINE USER VARIABLES AND INITIALIZE THEM HERE ***/
 
 
@@ -96,10 +72,7 @@ void InterruptHandlerLow ()
 	{
 		#ifdef ENABLE_SERIAL_PORT_TWO_RX
 		Rx_2_Int_Handler(); // call the rx2 interrupt handler (in serial_ports.c)
-		#endif	
-		
-		/* Sauvegarde le dernier ordre reçu */
-		//CurrentCmd = Cmd_Receive ();		
+		#endif		
 	}                              
 	else if (PIR3bits.TX2IF && PIE3bits.TX2IE) // tx2 interrupt?
 	{
@@ -153,17 +126,14 @@ void User_Autonomous_Code(void)
 			pwm01 = 127;
 			pwm02 = 127;
 			pwm03 = 127;
+			Order_Motor_Left_Update (127);
+			Order_Motor_Right_Update (127);
 		}
 		else
 		{
-			
-			/* Si le dernier ordre reçu est différent de CMD_ERROR (0x00) */
-			if (CurrentCmd != CMD_ERROR)
-			{	
-				/* Ajuster la valeurs des signaux PWM de commande des moteurs */
-				pwm01 = Limit_Mix(2000 + Order_Motor_Left + Order_Motor_Right - 127);
-				pwm02 = Limit_Mix(2000 + Order_Motor_Left - Order_Motor_Right + 127);
-			}
+			/* Ajuster la valeurs des signaux PWM de commande des moteurs */
+			pwm01 = Limit_Mix(2000 + Order_Motor_Left + Order_Motor_Right - 127);
+			pwm02 = Limit_Mix(2000 + Order_Motor_Left - Order_Motor_Right + 127);
 			
 			turret_handle();	
 		}
@@ -178,60 +148,10 @@ void User_Autonomous_Code(void)
 
 void Process_Data_From_Local_IO(void)
 {
-	static unsigned char byte1,byte2;
-  /* This code is executed at every loop, this handle the incomming communication */
+      /* This code is executed at every loop, this handle the incomming communication */
   	if(rc_dig_in01)
   	{
-	  	/* The bluetooth module has an active connection, processing incomming communication*/
-		if(Serial_Port_Two_Byte_Count()>0)
-		{
-			printf((char *)"Serial_Port_Two_Byte_Count : %d\n\r",Serial_Port_Two_Byte_Count());
-			/* There is an incoming command */
-			
-			CurrentCmd = Read_Serial_Port_Two();
-			printf((char *)"Cmd : %X\n\r",CurrentCmd);
-			
-			switch (CurrentCmd&0xF0) /* Masque les 4 LSB de la commande*/
-			{	/* Décodage de la commande et envoi de l'acquittement correspondant */
-				case CMD_DPL : 
-					Write_Serial_Port_Two (CMD_DPL_ACK); 
-					break;
-				case CMD_ENV : 
-					Write_Serial_Port_Two (CMD_ENV_ACK); 
-					break;
-				/* Si la commande n'est pas répertoriée, envoyer CMD_ERROR */
-				default : 
-					Write_Serial_Port_Two (CMD_ERROR);
-			}
-			
-			/* Attend que le buffer d'envoi soit vide */
-			printf((char *)"Attent d'envoi\n\r");
-			while(PIE3bits.TX2IE);
-			
-			switch (CurrentCmd&0xF0) /* Masque les 4 LSB de la commande*/
-			{	/* Getting incomming data */
-				case CMD_DPL : 
-					printf((char *)"Attent de reception\n\r");
-					while(!(Serial_Port_Two_Byte_Count()>=2) && rc_dig_in01 )
-					{
-						Getdata(&rxdata);
-						Putdata(&txdata);	
-					}
-					
-					/* Les deux octets sont reçus, on peut les lire */
-					byte1 = Read_Serial_Port_Two();
-					byte2 = Read_Serial_Port_Two();
-					
-					/* Mise à jour des consignes moteurs */
-					Order_Motor_Left_Update (byte1);
-					Order_Motor_Right_Update (byte2);
-					
-					break;
-				case CMD_ENV : 
-					
-					break;
-			}
-		} /* End of if */
+	  	CMD_Handler();
 	}
 	else
 	{/* bluetooth communication is off */

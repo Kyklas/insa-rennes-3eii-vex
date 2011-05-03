@@ -6,27 +6,45 @@
  * \date 4 avril 2011
  */
 
- #ifndef _ORDERS_H
+#ifndef _ORDERS_H
 #define _ORDERS_H
+
+ /* ------------------------------------ */
+ /* -------- Variables globales -------- */
+ /* ------------------------------------ */
+
+/**
+ * \var Order_Turret_Angle
+ * \brief Consigne de gisement de la tourelle sonar
+ * 
+*/
+extern volatile unsigned char Order_Turret ;
+
+/**
+ * \var Order_Motor_Left
+ * \brief Consigne de vitesse du moteur gauche
+ * 
+*/
+extern volatile unsigned char Order_Motor_Left;
+
+/**
+ * \var Order_Motor_Right
+ * \brief Consigne de vitesse du moteur droit
+ * 
+*/
+extern volatile unsigned char Order_Motor_Right;
 
  /* --------------------------- */
  /* -------- Fonctions -------- */
  /* --------------------------- */
- /**
-  * \fn void Cmd_Ack (unsigned char Cmd)
-  * \brief Envoi un acquittement sur la commande recue au PDA
-  * \param[in] Cmd Dernier ordre recu
-  * \return Void
- */
-void Cmd_Ack (unsigned char Cmd);
 
  /**
-  * \fn void Order_Turret_Angle_Update (char Order_Turret)
+  * \fn void Order_Turret_Update (char Order_Turret)
   * \brief Modifie la consigne de gisement de la tourelle
   * \param[in,out] Order_Turret Consigne de gisement de la tourelle
   * \return Void
  */
-void Order_Turret_Angle_Update (char Order_Turret);
+void Order_Turret_Update (char Order_Turret);
 
  /**
   * \fn void Order_Motor_Left_Update (unsigned char Order_Motor)
@@ -44,24 +62,8 @@ void Order_Motor_Left_Update (unsigned char Order_Motor);
  */
 void Order_Motor_Right_Update (unsigned char Order_Motor);
 
-/**
- * \fn unsigned char Cmd_Receive (void)
- * \brief Procedure de reception d'une commande envoyee par le PDA
- * \param Void
- * \return La commande sur un octet
-*/
-unsigned char Cmd_Receive (void);
+void CMD_Handler(void);
 
-/**
- * \fn unsigned char Order_ENV_Transmit (unsigned char Distance, char Angle)
- * \brief Procedure d'envoi des infos d'environnement au PDA
- * \param[in] Distance Distance de l'objet le plus proche pour un angle donne
- * \param[in] Angle Angle de gisement de la tourelle
- * \return TRUE si l'acquittement du PDA est OK, FALSE sinon
-*/
-unsigned char Order_ENV_Transmit (unsigned char Distance, char Angle);
-
-
-unsigned char ENV_Data_Transmit (unsigned char Distance, char Angle);
+char ENV_Data_Transmit(unsigned char Distance, char Angle);
 
 #endif

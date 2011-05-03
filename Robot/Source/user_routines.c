@@ -250,7 +250,7 @@ void User_Initialization (void)
   /* This code receives the 1st packet from master to obtain the version # */
   while (!statusflag.NEW_SPI_DATA);  /* Wait for 1st packet from master */
   Getdata(&rxdata);   
-  printf("VEX - Master v%d, User v%d\n",(int)rxdata.master_version,(int)CODE_VERSION);        
+  printf((char *)"VEX - Master v%d, User v%d\n",(int)rxdata.master_version,(int)CODE_VERSION);        
 #endif
 }
 
@@ -270,7 +270,7 @@ void Process_Data_From_Master_uP(void)
   //Default_Routine();  /* Optional.  See below. */
 
   /* Add your own code here. */
-  printf("%2x : %2x %2x %2x %2x %2x %2x  %2x %2x %2x %2x %2x %2x\n",(int)rxdata.rc_receiver_status_byte.allbits,
+  printf((char*)"%2x : %2x %2x %2x %2x %2x %2x  %2x %2x %2x %2x %2x %2x\n",(int)rxdata.rc_receiver_status_byte.allbits,
     (int)PWM_in1,(int)PWM_in2,(int)PWM_in3,(int)PWM_in4,(int)PWM_in5,
     (int)PWM_in6,(int)PWM_in7,(int)PWM_in8,(int)PWM_in9,(int)PWM_in10,
     (int)PWM_in11,(int)PWM_in12);  /* printf EXAMPLE */

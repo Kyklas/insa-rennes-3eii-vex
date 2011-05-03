@@ -59,6 +59,7 @@
  * \brief Erreur de Commande 
  *
 */
+
 #define CMD_ERROR				0x00
 
 /**
@@ -106,7 +107,7 @@
  * \brief Incrément pour le parcours du FOV
  *
  */
-#define ENV_ANGLE_INC           5
+#define ENV_ANGLE_INC           3
 /**
  * \brief Longeur Maximun d'une commande, code et données incluses
  *

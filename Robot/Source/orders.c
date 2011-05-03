@@ -9,11 +9,14 @@
  /* ---------------------------- */
  /* -------- Librairies -------- */
  /* ---------------------------- */
- 
+
+#include "../Header/ifi_default.h"
+#include "../Header/ifi_aliases.h" 
+
 #include "../Header/orders.h"
 #include "../Header/serial_ports.h"
 #include "../Header/communication.h"
-#include "../Header/ifi_picdefs.h"
+
 #include <stdio.h>
 
  /* ------------------------------------ */
@@ -23,67 +26,44 @@
 /**
  * \var Order_Turret_Angle
  * \brief Consigne de gisement de la tourelle sonar
- * Variable globale declaree dans user_routine_fast.c
+ * 
 */
- volatile char Order_Turret_Angle ;
+volatile unsigned char Order_Turret ;
 
 /**
  * \var Order_Motor_Left
  * \brief Consigne de vitesse du moteur gauche
- * Variable globale declaree dans user_routine_fast.c
+ * 
 */
-extern volatile unsigned char Order_Motor_Left;
+volatile unsigned char Order_Motor_Left = 0x00;
 
 /**
  * \var Order_Motor_Right
  * \brief Consigne de vitesse du moteur droit
- * Variable globale declaree dans user_routine_fast.c
+ * 
 */
-extern volatile unsigned char Order_Motor_Right;
+volatile unsigned char Order_Motor_Right = 0x00;
+
+volatile unsigned char Order_ACK_Pending = FALSE;
 
 
-/**
- * \var Rx_2_Queue_Byte_Count
- * \brief Nb d'octet dans la file d'attente de reception du port serie 2
- * Variable globale declaree dans serial_port.c
-*/
-extern volatile unsigned char Rx_2_Queue_Byte_Count;
 
  /* --------------------------- */
  /* -------- Fonctions -------- */
  /* --------------------------- */
 
-/**
- * \fn void Cmd_Ack (unsigned char Cmd)
- * \brief Envoi un acquittement sur la commande recue au PDA
- * \param[in] Cmd Dernier ordre recu
- * \return Void
-*/
-void Cmd_Ack (unsigned char Cmd)
-{
-	switch (Cmd&0xF0) /* Masque les 4 LSB de la commande*/
-	{	/* Décodage de la commande et envoi de l'acquittement correspondant */
-		case CMD_DPL : Write_Serial_Port_Two (CMD_DPL_ACK); break;
-		case CMD_ENV : Write_Serial_Port_Two (CMD_ENV_ACK); break;
-		/* Si la commande n'est pas répertoriée, envoyer CMD_ERROR */
-		default : Write_Serial_Port_Two (CMD_ERROR);
-	}
-	
-	/* Traitement l'interruption sur TX2 */
-	Tx_2_Int_Handler();
-}
 
 
 /**
- * \fn void Order_Turret_Angle_Update (char Order_Turret)
+ * \fn void Order_Turret_Update (char Order_Turret)
  * \brief Modifie la consigne de gisement de la tourelle
  * \param[in,out] Order_Turret Consigne de gisement de la tourelle
  * \return Void
 */
-void Order_Turret_Angle_Update (char Order_Turret)
+void Order_Turret_Update (char Order)
 {
 	/* Met à jour la consigne de gisement de la tourelle */
-	Order_Turret_Angle = Order_Turret;  
+	Order_Turret = Order;  
 }
 
 /**
@@ -110,176 +90,87 @@ void Order_Motor_Right_Update (unsigned char Order_Motor)
 	Order_Motor_Right = Order_Motor ; 
 }
 
-/**
- * \fn unsigned char Cmd_Receive (void)
- * \brief Procedure de reception d'une commande envoyee par le PDA
- * \param Void
- * \return La commande sur un octet
-*/
-unsigned char Cmd_Receive (void)
+char Wait_SP2_Byte_Count(unsigned short count)
 {
-	unsigned char CMD;
-	unsigned char  byte1, byte2, temp;
-	
-	/* Désactive les interruptions sur RX2 */
-	PIE3bits.RC2IE = 0;
-	
-	/* Lit la commande reçue sur le port série 21 */
-	CMD = Read_Serial_Port_Two();
-	
-	/* Désactive les interruptions sur RX2 (ré-activée par Read_Serial_Port_Two() ) */
-	PIE3bits.RC2IE = 0;
-	
-	/* Envoi de l'acquittement sur la commande */
-	Cmd_Ack (CMD);
-	
-	/* Command bits mask */
-	temp = CMD & 0xF0;
-	
-	switch (temp) 
-	{	/* Si la commande reçue est une commande de déplacement */
-		case CMD_DPL :
-		{	/* Attend la réception d'un nouvel octet sur le port série 2 */
-			while (!PIR3bits.RC2IF);
-			
-			/* Traite l'interruption sur le port série 2 */
-			Rx_2_Int_Handler();
-			
-			/* Attend la réception d'un nouvel octet sur le port série 2 */
-			while (!PIR3bits.RC2IF);
-			
-			/* Traite l'interruption sur le port série 2 */
-			Rx_2_Int_Handler();
-			
-			/* Les deux octets sont reçus, on peut les lire */
-			byte1 = Read_Serial_Port_Two();
-			byte2 = Read_Serial_Port_Two();
-			
-			/* Mise à jour des consignes moteurs */
-			Order_Motor_Left_Update (byte1);
-			Order_Motor_Right_Update (byte2);	
-			
-			break;
-		}
-		/* Si la commande reçue est une commande d'environnement */
-		case CMD_ENV :  
-		{	/* Attend la réception d'un nouvel octet sur le port série 2 */
-			while (!PIR3bits.RC2IF);
-			
-			/* Traite l'interruption sur le port série 2 */
-			Rx_2_Int_Handler();
-			
-			/* Octet reçu, on peut le lire */
-			byte1 = (char) Read_Serial_Port_Two();	
-
-			/* Mise à jour de la consigne d'angle de la tourelle */
-			Order_Turret_Angle_Update (byte1);
-			
-			break;
-		}
+	while(Serial_Port_Two_Byte_Count() < count && rc_dig_in01)
+	{
+		Getdata(&rxdata);
+		Putdata(&txdata);
 	}
 	
-	/* Active les interruptions sur le port série 2 */
-	PIE3bits.RC2IE = 1;
-	
-	/* Retourne la commande reçue */
-	return (CMD);	
-}
-
-
-unsigned char ENV_Data_Transmit (unsigned char Distance, char Angle)
-{
-	unsigned char Ack;
-	
-	/* Envoi l'octet de commande d'environnement */
-	Write_Serial_Port_Two(CMD_ENV);
-	
-	/*Attente de la reception de l'acknowledge*/
-	while(!(Serial_Port_Two_Byte_Count()>=1));
-	
-	/* Lecture de l'acquittement */
-	Ack = Read_Serial_Port_Two();
-	printf((char *)"ENV_Data_Transmit Ack : %X\n\r",Ack);
-	/* Si l'acquittement reçu correspond à un acquittement de commande d'environnement */
-	if (Ack == CMD_ENV_ACK)
-	{
-		Write_Serial_Port_Two(Distance);
-		Write_Serial_Port_Two((unsigned char)Angle);
-				
-		/* Attend que le buffer d'envoi soit vide */
-		while(PIE3bits.TX2IE);
-		
+	if(rc_dig_in01)
 		return TRUE;
-	}
 	else
-	{
-		Write_Serial_Port_Two(CMD_ERROR);
-		
-		/* Attend que le buffer d'envoi soit vide */
-		while(PIE3bits.TX2IE);
-		
 		return FALSE;
-	}
 }	
 
-/**
- * \fn unsigned char Order_ENV_Transmit (unsigned char Distance, char Angle)
- * \brief Procedure d'envoi des infos d'environnement au PDA
- * \param[in] Distance Distance de l'objet le plus proche pour un angle donne
- * \param[in] Angle Angle de gisement de la tourelle
- * \return TRUE si l'acquittement du PDA est OK, FALSE sinon
-*/
-unsigned char Order_ENV_Transmit (unsigned char Distance, char Angle)
-{
-	unsigned char Ack;
+
+void CMD_DPL_Handler(unsigned char cmd_ack)
+{	
+	unsigned char byte1,byte2; 
+	if(!Wait_SP2_Byte_Count(CMD_DPL_LEN))
+		return; // we lost connection, quit handler
 	
-	/* Désactive les interruptions sur RX2*/
-	PIE3bits.RC2IE = 0;
+	/* Les deux octets sont reçus, on peut les lire */
+	byte1 = Read_Serial_Port_Two();
+	byte2 = Read_Serial_Port_Two();
 	
-	/* Envoi l'octet de commande d'environnement */
-	Write_Serial_Port_Two(CMD_ENV);
+	/* Mise à jour des consignes moteurs */
+	Order_Motor_Left_Update (byte1);
+	Order_Motor_Right_Update (byte2);
 	
-	/* Attend la réception d'un nouvel octet sur le port série 2 */
-	while (!PIR3bits.RC2IF);
+	/* Sending acknowledege to the command */
+	Write_Serial_Port_Two (CMD_DPL_ACK); 
 	
-	/* Traite l'interruption sur le port série 2 */
-	Rx_2_Int_Handler();
-	
-	/* Lecture de l'acquittement */
-	Ack = Read_Serial_Port_Two();
-		
-	/* Si l'acquittement reçu correspond à un acquittement de commande d'environnement */
-	if (Ack == CMD_ENV_ACK)
-	{
-		/* Envoi l'octet de correspondant à la distance mesurée */
-		Write_Serial_Port_Two(Distance);
-		
-		/* Attend que le buffer d'envoi soit vide */
-		while(!PIR3bits.TX2IF);
-				
-		/* Envoi l'octet de correspondant au gisement de la tourelle */
-		Write_Serial_Port_Two((unsigned char)Angle);
-				
-		/* Attend que le buffer d'envoi soit vide */
-		while(!PIR3bits.TX2IF);
-		
-		/* Active les interruptions sur le port série 2 */
-		PIE3bits.RC2IE = 1;	
-		
-		/* Retourne TRUE */
-		return (TRUE);
-	}
-	else
-	{
-		/* Envoie CMD_ERROR au PDA */
-		Write_Serial_Port_Two (CMD_ERROR);
-		
-		/* Attend que le buffer d'envoi soit vide */
-		while(!PIR3bits.TX2IF);
-		
-		/* Retourne FALSE */
-		return (FALSE);
-	}
 }
 
+void CMD_ENV_ACK_Handler(unsigned char cmd_ack)
+{
+	/* Acknowledge received, reseting it */
+	if(Order_ACK_Pending)
+		Order_ACK_Pending = FALSE;
+}
+
+void CMD_Handler(void)
+{
+	int cmd_ack;
+	if(Serial_Port_Two_Byte_Count()>0)
+	{
+		cmd_ack = Read_Serial_Port_Two();
+		
+		switch(cmd_ack&0xF0)
+		{
+			case CMD_DPL_ACK :
+			case CMD_ENV_ACK :
+				CMD_ENV_ACK_Handler(cmd_ack);
+				break;
+			case CMD_DPL :
+				CMD_DPL_Handler(cmd_ack);
+				break;
+			case CMD_ENV :
+				
+				break;
+			case CMD_ERROR :
+				
+				break;
+			default :
+				break;
+		}
+	}
+}
 	
+	
+char ENV_Data_Transmit(unsigned char Distance, char Angle)
+{
+	if(Order_ACK_Pending)
+		return FALSE;
+	
+	/* No order in progress, sending ENV Data */
+	
+	Write_Serial_Port_Two (CMD_ENV);
+	
+	Write_Serial_Port_Two(Distance);
+	Write_Serial_Port_Two((unsigned char)Angle);
+	
+	return TRUE;
+}
