@@ -349,7 +349,7 @@ void create_comm_interface( AppData * data)
 
 	data->devconn->ui.vbox = vbox;
 	data->devconn->ui.text_view =(GtkTextView *) view;
-	data->devconn->ui.fullscreen = TRUE;
+	data->devconn->ui.drawing_area = NULL;
 	display_comm_interface(data);
 }
 
