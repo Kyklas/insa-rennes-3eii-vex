@@ -22,17 +22,8 @@
  /* --------------------------- */
  /* -------- Fonctions -------- */
  /* --------------------------- */
- /**
-  * \fn void turret_Init (void)
-  * \brief Initialisation de la tourelle
-  * \return Void
-  */
-void turret_Init(void);
 
- /**
-  * \fn void turret_handle(void)
-  * \breif Gestion de la tourelle dans user_routines_fast.c -> User_Autonomous_Code()
-  */
+void turret_Init(void);
 void turret_handle(void);
 
 #endif

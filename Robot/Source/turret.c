@@ -26,10 +26,9 @@
  /* ------------------------------------ */
 
 /**
- * \var Order_Turret_Angle
- * \brief Consigne de gisement de la tourelle sonar
- * Variable globale declaree dans user_routine_fast.c
-*/
+ * \enum etat
+ * Enumeration des etats de la machine de la tourelle
+ */
 
 enum etat{acquisition,deplacement,emmition,idle};
 
@@ -52,14 +51,16 @@ void turret_Init(void)
 
  /**
   * \fn void turret_handle(void)
-  * \breif Gestion de la tourelle dans user_routines_fast.c -> User_Autonomous_Code()
+  * \breif Gestion de la tourelle par une machine d'état
+  *
+  * Machine d'état de la tourelle
   */
 void turret_handle(void)
 {
 	static enum etat turret_etat = acquisition;
 	static signed char angle = 0;
 	static signed char angle_inc = ENV_ANGLE_INC;
-	static int wait = 10;
+	static int wait = 5;
 	static int nb_acq = 3;
 	
 	switch(turret_etat)
@@ -106,7 +107,7 @@ void turret_handle(void)
 			
 			if(wait<=0)
 			{
-				wait = 10;
+				wait = 5;
 				nb_acq = 3;	
 				turret_etat = acquisition;
 			}
