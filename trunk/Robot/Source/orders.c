@@ -24,8 +24,8 @@
  /* ------------------------------------ */
 
 /**
- * \var Order_Turret_Angle
- * \brief Consigne de gisement de la tourelle sonar
+ * \var Order_Turret
+ * \brief Consigne de position de la tourelle sonar
  * 
 */
 volatile unsigned char Order_Turret ;
@@ -43,6 +43,15 @@ volatile unsigned char Order_Motor_Left = 0x00;
  * 
 */
 volatile unsigned char Order_Motor_Right = 0x00;
+
+/**
+ * \var Order_ACK_Pending
+ * \brief Information du la communication
+ * 
+ * 	TRUE - une commande est en cours d'envoie 
+ *
+ * 	FALSE - la communication est libre
+*/
 
 volatile unsigned char Order_ACK_Pending = FALSE;
 
@@ -90,6 +99,14 @@ void Order_Motor_Right_Update (unsigned char Order_Motor)
 	Order_Motor_Right = Order_Motor ; 
 }
 
+/**
+  * \fn char Wait_SP2_Byte_Count(unsigned short count)
+  * \brief Méthode d'attente d'un nombre minimum de donnée sur le port série 2
+  * prend en compte le master et l'état de la connection
+  * \param[in] count nombre minimum de donnée attendu
+  * \return TRUE si la connection est toujours active, FALSE sinon
+ */
+
 char Wait_SP2_Byte_Count(unsigned short count)
 {
 	while(Serial_Port_Two_Byte_Count() < count && rc_dig_in01)
@@ -104,6 +121,12 @@ char Wait_SP2_Byte_Count(unsigned short count)
 		return FALSE;
 }	
 
+/**
+  * \fn void CMD_DPL_Handler(unsigned char cmd_ack)
+  * \brief Gestionnaire de la commande CMD_DPL
+  * \param[in] cmd_ack commande reçu
+  * \return Void
+ */
 
 void CMD_DPL_Handler(unsigned char cmd_ack)
 {	
@@ -124,12 +147,25 @@ void CMD_DPL_Handler(unsigned char cmd_ack)
 	
 }
 
+/**
+  * \fn void CMD_ENV_ACK_Handler(unsigned char cmd_ack)
+  * \brief Gestionnaire de la commande CMD_ENV_ACK
+  * \param[in] cmd_ack commande reçu
+  * \return Void
+ */
+
 void CMD_ENV_ACK_Handler(unsigned char cmd_ack)
 {
 	/* Acknowledge received, reseting it */
 	if(Order_ACK_Pending)
 		Order_ACK_Pending = FALSE;
 }
+
+/**
+  * \fn void CMD_Handler(void)
+  * \brief Gestionnaire des commandes recus
+  * \return Void
+ */
 
 void CMD_Handler(void)
 {
@@ -159,7 +195,14 @@ void CMD_Handler(void)
 	}
 }
 	
-	
+/**
+  * \fn char ENV_Data_Transmit(unsigned char Distance, char Angle)
+  * \brief Méthode d'envoie des informations d'environement
+  * \param[in] Distance Distance vu par le sonar
+  * \param[in] Angle Angle de la tourelle
+  * \return TRUE si l'envoie est effectif, FALSE sinon
+ */
+ 	
 char ENV_Data_Transmit(unsigned char Distance, char Angle)
 {
 	if(Order_ACK_Pending)

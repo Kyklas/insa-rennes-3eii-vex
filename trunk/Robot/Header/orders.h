@@ -14,8 +14,8 @@
  /* ------------------------------------ */
 
 /**
- * \var Order_Turret_Angle
- * \brief Consigne de gisement de la tourelle sonar
+ * \var Order_Turret
+ * \brief Consigne de position de la tourelle sonar
  * 
 */
 extern volatile unsigned char Order_Turret ;
@@ -62,7 +62,21 @@ void Order_Motor_Left_Update (unsigned char Order_Motor);
  */
 void Order_Motor_Right_Update (unsigned char Order_Motor);
 
+/**
+  * \fn void CMD_Handler(void)
+  * \brief Gestionnaire des commandes recus
+  * \return Void
+ */
+
 void CMD_Handler(void);
+
+/**
+  * \fn char ENV_Data_Transmit(unsigned char Distance, char Angle)
+  * \brief Méthode d'envoie des informations d'environement
+  * \param[in] Distance Distance vu par le sonar
+  * \param[in] Angle Angle de la tourelle
+  * \return TRUE si l'envoie est effectif, FALSE sinon
+ */
 
 char ENV_Data_Transmit(unsigned char Distance, char Angle);
 

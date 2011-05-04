@@ -1,21 +1,36 @@
-/*
-*	Include sonar.h in all file where any of these functions are used
-*	1/ Put SonarInit() in User_Initialization() 
-*		in the user_rouines.c
-*	2/ Put SonarHandle() in InterruptHandlerLow()
-*		in user_routines_fast.c
-*	3/ Use SonarPulse() to get distance in SonarDistance
-* 
-*	Check on which interrupt and which digital output the sonar is in
-*	Check digital output initialization
-*/
+/**
+ * \file sonar.c
+ * \brief Implementation du driver pour le sonar
+ * \author Stanislas BERTRAND
+ * \version 1.0
+ * \date 4 avril 2010
+ */ 
 #include "../Header/sonar.h"
 #include "../Header/ifi_aliases.h"
 #include "../Header/ifi_default.h"
 #include "../Header/ifi_utilities.h"
 
+
+/**
+ * \var SonarDistance
+ * \brief Distance mesuré par le sonar
+ * 
+*/
 unsigned int SonarDistance;
+
+/**
+ * \var ValidSonarDistance
+ * \brief information concernant SonarDistance, TRUE la distance est correct, FALSE incorrect
+ * 
+*/
 short ValidSonarDistance;
+
+/**
+ * \fn void SonarInit(void)
+ * \brief Methode d'initialisation du sonar
+ * 
+ * Initialise le Sonar
+*/
 
 void SonarInit(void)
 {
@@ -30,6 +45,14 @@ void SonarInit(void)
 	// timer 1 interrupt priority low
 	T1_IP = 0; 
 }
+
+/**
+ * \fn void SonarHandle(void)
+ * \brief Gestionnaire du sonar
+ *
+ * Gere le timer et l'interrupt liée au Sonar
+*/
+
 void SonarHandle(void)
 {
 	if (  T1_IF && T1_IE )
@@ -55,6 +78,14 @@ void SonarHandle(void)
 	}
 	
 }
+
+/**
+ * \fn void SonarPulse(void)
+ * \brief Methode effectuant une mesure
+ *
+ * Met à jour les variables globale > SonarDistance < et > ValidSonarDistance <
+*/
+
 void SonarPulse(void)
 {
 	if(! T1_ON )

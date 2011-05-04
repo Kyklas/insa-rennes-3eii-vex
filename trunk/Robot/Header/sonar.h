@@ -1,16 +1,10 @@
-/*******************************************************************************
-*
-*	TITLE:		sonar.h
-*
-*	VERSION:	                         
-*
-*	DATE:		
-*
-*	AUTHOR:		Stanislas Bertrand
-*
-*	COMMENTS:
-*
-********************************************************************************/
+/**
+ * \file sonar.h
+ * \brief Definition du driver pour le sonar
+ * \author Stanislas BERTRAND
+ * \version 1.0
+ * \date 4 avril 2010
+ */ 
 #ifndef _SONAR_H
 #define _SONAR_H
 
